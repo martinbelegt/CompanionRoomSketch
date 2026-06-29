@@ -1,18 +1,8 @@
+import "./Canvas.css";
+import PdfCanvas from "../PdfCanvas/PdfCanvas";
+
 function Canvas() {
-  return (
-    <div
-      style={{
-        background: "white",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        fontSize: 32,
-        color: "#94a3b8",
-      }}
-    >
-      Canvas
-    </div>
-  );
+  return <PdfCanvas />;
 }
 
 export default Canvas;

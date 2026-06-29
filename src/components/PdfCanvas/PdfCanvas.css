@@ -1,0 +1,100 @@
+.pdf-toolbar {
+  display: flex;
+
+  gap: 12px;
+
+  align-items: center;
+
+  margin-bottom: 20px;
+}
+
+.pdf-toolbar button {
+  width: 36px;
+
+  height: 36px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  background: white;
+
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+  font-size: 18px;
+}
+
+.pdf-toolbar span {
+  width: 60px;
+
+  text-align: center;
+
+  font-weight: 600;
+}
+.pdf-canvas {
+  width: 100%;
+  height: 100%;
+
+  overflow: auto;
+
+  background: #eef2f7;
+
+  padding: 32px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+}
+
+.pdf-page-wrap {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+.pdf-page-wrap {
+  position: relative;
+}
+
+.calibration-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.calibration-point {
+  fill: #2563eb;
+  stroke: white;
+  stroke-width: 2;
+}
+
+.calibration-line {
+  stroke: #2563eb;
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+}
+
+.active-tool {
+  background: #2563eb !important;
+  color: white;
+}
+.pdf-page-wrap canvas {
+  display: block;
+}
+
+.calibration-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.pdf-page-wrap {
+  position: relative;
+}

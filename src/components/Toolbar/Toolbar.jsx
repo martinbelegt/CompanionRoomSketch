@@ -1,15 +1,16 @@
+import "./Toolbar.css";
+
 function Toolbar() {
   return (
-    <div
-      style={{
-        background: "#1e293b",
-        color: "white",
-        padding: 16,
-        fontWeight: "bold",
-      }}
-    >
-      Companion RoomSketch
-    </div>
+    <header className="toolbar">
+      <div className="toolbar-left">
+        🏠 <span>Companion RoomSketch</span>
+      </div>
+
+      <div className="toolbar-center">Appartement Hank</div>
+
+      <div className="toolbar-right">Build Your Life</div>
+    </header>
   );
 }
 
