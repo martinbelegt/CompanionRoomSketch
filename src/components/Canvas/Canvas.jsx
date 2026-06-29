@@ -1,8 +1,9 @@
 import "./Canvas.css";
-import PdfCanvas from "../PdfCanvas/PdfCanvas";
+
+import CanvasEngine from "../CanvasEngine/CanvasEngine";
 
 function Canvas() {
-  return <PdfCanvas />;
+  return <CanvasEngine />;
 }
 
 export default Canvas;
