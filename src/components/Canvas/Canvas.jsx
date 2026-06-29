@@ -2,9 +2,19 @@ import "./Canvas.css";
 
 import CanvasEngine from "../CanvasEngine/CanvasEngine";
 
-function Canvas({ furniture, onMoveFurniture }) {
+function Canvas({
+  furniture,
+  onMoveFurniture,
+  measurement,
+  onMeasurementChange,
+}) {
   return (
-    <CanvasEngine furniture={furniture} onMoveFurniture={onMoveFurniture} />
+    <CanvasEngine
+      furniture={furniture}
+      onMoveFurniture={onMoveFurniture}
+      measurement={measurement}
+      onMeasurementChange={onMeasurementChange}
+    />
   );
 }
 

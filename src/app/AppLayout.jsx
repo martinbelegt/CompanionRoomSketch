@@ -21,6 +21,13 @@ function AppLayout() {
     },
   ]);
 
+  const [measurement, setMeasurement] = useState({
+    points: [],
+    pixelDistance: null,
+  });
+
+  const [calibration, setCalibration] = useState(null);
+
   function addFurniture(type) {
     if (type !== "sofa") return;
 
@@ -44,6 +51,16 @@ function AppLayout() {
     );
   }
 
+  function calibrate(realDistanceMm) {
+    if (!measurement.pixelDistance || !realDistanceMm) return;
+
+    setCalibration({
+      pixels: measurement.pixelDistance,
+      millimeters: realDistanceMm,
+      mmPerPixel: realDistanceMm / measurement.pixelDistance,
+    });
+  }
+
   return (
     <div className="app-layout">
       <Toolbar />
@@ -51,9 +68,18 @@ function AppLayout() {
       <main className="workspace">
         <Sidebar onAddFurniture={addFurniture} />
 
-        <Canvas furniture={furniture} onMoveFurniture={moveFurniture} />
+        <Canvas
+          furniture={furniture}
+          onMoveFurniture={moveFurniture}
+          measurement={measurement}
+          onMeasurementChange={setMeasurement}
+        />
 
-        <Inspector />
+        <Inspector
+          measurement={measurement}
+          calibration={calibration}
+          onCalibrate={calibrate}
+        />
       </main>
 
       <StatusBar />

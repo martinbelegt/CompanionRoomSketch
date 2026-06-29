@@ -11,7 +11,19 @@ import FurnitureLayer from "./Layers/FurnitureLayer";
 import FloorplanLayer from "./Layers/FloorplanLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 
-function CanvasEngine({ furniture, onMoveFurniture }) {
+function getDistance(pointA, pointB) {
+  const dx = pointB.x - pointA.x;
+  const dy = pointB.y - pointA.y;
+
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function CanvasEngine({
+  furniture,
+  onMoveFurniture,
+  measurement,
+  onMeasurementChange,
+}) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
 
@@ -19,8 +31,6 @@ function CanvasEngine({ furniture, onMoveFurniture }) {
     x: 100,
     y: 100,
   });
-
-  const [measurePoints, setMeasurePoints] = useState([]);
 
   function getWorldPointer(stage) {
     const pointer = stage.getPointerPosition();
@@ -41,10 +51,25 @@ function CanvasEngine({ furniture, onMoveFurniture }) {
 
     setCursor(worldPointer);
 
-    setMeasurePoints((current) => {
-      if (current.length >= 2) return [worldPointer];
+    const currentPoints = measurement.points ?? [];
 
-      return [...current, worldPointer];
+    if (currentPoints.length >= 2) {
+      onMeasurementChange({
+        points: [worldPointer],
+        pixelDistance: null,
+      });
+
+      return;
+    }
+
+    const nextPoints = [...currentPoints, worldPointer];
+
+    onMeasurementChange({
+      points: nextPoints,
+      pixelDistance:
+        nextPoints.length === 2
+          ? getDistance(nextPoints[0], nextPoints[1])
+          : null,
     });
   }
 
@@ -72,7 +97,7 @@ function CanvasEngine({ furniture, onMoveFurniture }) {
 
           <FurnitureLayer furniture={furniture} onMove={onMoveFurniture} />
 
-          <MeasurementLayer points={measurePoints} />
+          <MeasurementLayer points={measurement.points} />
 
           <CursorLayer cursor={cursor} onMove={setCursor} />
         </Layer>
