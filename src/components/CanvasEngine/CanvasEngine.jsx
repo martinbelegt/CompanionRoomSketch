@@ -42,6 +42,7 @@ function CanvasEngine({
   pendingFurniture,
   onPlaceFurniture,
   temporaryTool,
+  onResizeFurniture,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
@@ -152,6 +153,7 @@ function CanvasEngine({
             selectedFurnitureId={selectedFurnitureId}
             onSelectFurniture={onSelectFurniture}
             onMove={onMoveFurniture}
+            onResize={onResizeFurniture}
           />
 
           {currentTool === "measure" && (

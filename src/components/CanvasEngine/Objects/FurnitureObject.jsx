@@ -7,6 +7,7 @@ function FurnitureObject({
   selected,
   onSelect,
   onMove,
+  onResize,
   preview = false,
 }) {
   const [image] = useImage(item.imageUrl);
@@ -21,6 +22,18 @@ function FurnitureObject({
     if (!stage) return;
 
     stage.container().style.cursor = cursor;
+  }
+
+  function handleResizeDragMove(e) {
+    e.cancelBubble = true;
+
+    const handleX = Math.max(30, e.target.x() + 9);
+    const handleY = Math.max(30, e.target.y() + 9);
+
+    onResize(item.id, {
+      widthMm: handleX * mmPerPixel,
+      depthMm: handleY * mmPerPixel,
+    });
   }
 
   return (
@@ -117,6 +130,7 @@ function FurnitureObject({
             strokeWidth={3}
             cornerRadius={9}
           />
+
           <Rect
             x={width - 9}
             y={height - 9}
@@ -126,6 +140,18 @@ function FurnitureObject({
             stroke="#2563eb"
             strokeWidth={3}
             cornerRadius={9}
+            draggable
+            onMouseEnter={(e) => setCursor(e, "nwse-resize")}
+            onMouseLeave={(e) => setCursor(e, "grab")}
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+              onSelect(item.id);
+            }}
+            onDragMove={handleResizeDragMove}
+            onDragEnd={(e) => {
+              e.cancelBubble = true;
+              setCursor(e, "grab");
+            }}
           />
         </>
       )}

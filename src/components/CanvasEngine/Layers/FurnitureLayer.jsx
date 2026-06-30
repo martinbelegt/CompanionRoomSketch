@@ -6,6 +6,7 @@ function FurnitureLayer({
   selectedFurnitureId,
   onSelectFurniture,
   onMove,
+  onResize,
 }) {
   return (
     <>
@@ -15,6 +16,7 @@ function FurnitureLayer({
           item={item}
           calibration={calibration}
           onMove={onMove}
+          onResize={onResize}
           selected={item.id === selectedFurnitureId}
           onSelect={onSelectFurniture}
         />

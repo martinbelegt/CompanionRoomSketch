@@ -14,6 +14,7 @@ function Canvas({
   pendingFurniture,
   onPlaceFurniture,
   temporaryTool,
+  onResizeFurniture,
 }) {
   return (
     <CanvasEngine
@@ -28,6 +29,7 @@ function Canvas({
       pendingFurniture={pendingFurniture}
       onPlaceFurniture={onPlaceFurniture}
       temporaryTool={temporaryTool}
+      onResizeFurniture={onResizeFurniture}
     />
   );
 }

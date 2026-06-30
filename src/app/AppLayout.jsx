@@ -55,6 +55,20 @@ function AppLayout() {
     );
   }
 
+  function resizeFurniture(id, size) {
+    setFurniture((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              widthMm: Math.max(300, size.widthMm),
+              depthMm: Math.max(300, size.depthMm),
+            }
+          : item,
+      ),
+    );
+  }
+
   function calibrate(realDistanceMm) {
     if (!measurement.pixelDistance || !realDistanceMm) return;
 
@@ -154,6 +168,7 @@ function AppLayout() {
           pendingFurniture={pendingFurniture}
           onPlaceFurniture={placePendingFurniture}
           temporaryTool={temporaryTool}
+          onResizeFurniture={resizeFurniture}
         />
 
         <Inspector
