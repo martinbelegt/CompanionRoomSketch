@@ -150,7 +150,9 @@ function CanvasEngine({
             <MeasurementLayer points={measurement.points} />
           )}
 
-          <CursorLayer cursor={cursor} onMove={setCursor} />
+          {activeTool === "measure" && (
+            <CursorLayer cursor={cursor} onMove={setCursor} />
+          )}
         </Layer>
       </Stage>
     </div>
