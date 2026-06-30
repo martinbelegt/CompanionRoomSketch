@@ -92,6 +92,8 @@ function AppLayout() {
       }
 
       if (e.code === "Escape") {
+        e.preventDefault();
+
         setPendingFurniture(null);
 
         setMeasurement({
@@ -104,6 +106,13 @@ function AppLayout() {
         setActiveTool("select");
 
         setTemporaryTool(null);
+
+        return;
+      }
+      if (e.code === "Delete") {
+        if (!selectedFurnitureId) return;
+
+        deleteSelectedFurniture();
       }
     }
 
@@ -120,7 +129,7 @@ function AppLayout() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []);
+  }, [selectedFurnitureId]);
 
   return (
     <div className="app-layout">
