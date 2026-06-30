@@ -12,6 +12,8 @@ import FloorplanLayer from "./Layers/FloorplanLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 
+import { measureDistance } from "../../measurement";
+
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
   const dy = pointB.y - pointA.y;
@@ -71,7 +73,7 @@ function CanvasEngine({
   function handleStageMouseDown(e) {
     const stage = e.target.getStage();
 
-    if (e.target !== stage) return;
+    if (currentTool !== "measure" && e.target !== stage) return;
 
     const rawPointer = getWorldPointer(stage);
 
@@ -98,21 +100,33 @@ function CanvasEngine({
         : rawPointer;
 
     if (currentPoints.length >= 2) {
+      const measurementResult =
+        nextPoints.length === 2
+          ? measureDistance({
+              startPoint: nextPoints[0],
+              endPoint: nextPoints[1],
+              calibration,
+            })
+          : null;
+
       onMeasurementChange({
-        points: [worldPointer],
-        pixelDistance: null,
+        points: nextPoints,
+        pixelDistance: measurementResult?.pixelDistance ?? null,
+        distanceMm: measurementResult?.distanceMm ?? null,
       });
       return;
     }
 
     const nextPoints = [...currentPoints, worldPointer];
 
+    const pixelDistance =
+      nextPoints.length === 2
+        ? getDistance(nextPoints[0], nextPoints[1])
+        : null;
+
     onMeasurementChange({
       points: nextPoints,
-      pixelDistance:
-        nextPoints.length === 2
-          ? getDistance(nextPoints[0], nextPoints[1])
-          : null,
+      pixelDistance,
     });
   }
 

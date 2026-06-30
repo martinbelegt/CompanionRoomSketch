@@ -19,6 +19,25 @@ function Inspector({
     (item) => item.id === selectedFurnitureId,
   );
 
+  const hasValidCalibration =
+    calibration?.mmPerPixel != null && !Number.isNaN(calibration.mmPerPixel);
+
+  const measuredMm =
+    hasValidCalibration && measurement.pixelDistance
+      ? measurement.pixelDistance * calibration.mmPerPixel
+      : null;
+
+  const expectedMm = Number(realDistanceMm.replace(",", "."));
+  const hasExpectedMm = expectedMm > 0 && !Number.isNaN(expectedMm);
+
+  const differenceMm =
+    measuredMm != null && hasExpectedMm ? measuredMm - expectedMm : null;
+
+  const differencePercent =
+    differenceMm != null && hasExpectedMm
+      ? Math.abs(differenceMm / expectedMm) * 100
+      : null;
+
   useEffect(() => {
     if (!selectedFurniture) {
       setWidthCm("");
@@ -31,12 +50,8 @@ function Inspector({
   }, [selectedFurniture]);
 
   function handleCalibrate() {
-    const normalizedValue = realDistanceMm.replace(",", ".");
-    const value = Number(normalizedValue);
-
-    if (!value || Number.isNaN(value)) return;
-
-    onCalibrate(value);
+    if (!hasExpectedMm) return;
+    onCalibrate(expectedMm);
   }
 
   function handleSaveFurnitureSize() {
@@ -46,6 +61,14 @@ function Inspector({
       widthMm: Number(widthCm) * 10,
       depthMm: Number(depthCm) * 10,
     });
+  }
+
+  function getScaleCheckText() {
+    if (differencePercent == null) return "";
+
+    if (differencePercent <= 1) return "🟢 Uitstekend";
+    if (differencePercent <= 3) return "🟠 Bruikbaar";
+    return "🔴 Controleer opnieuw";
   }
 
   return (
@@ -76,10 +99,60 @@ function Inspector({
         <button
           className="primary-button"
           onClick={handleCalibrate}
-          disabled={!measurement.pixelDistance || !realDistanceMm}
+          disabled={!measurement.pixelDistance || !hasExpectedMm}
         >
-          Gebruik deze maat
+          Gebruik als schaal
         </button>
+      </section>
+
+      <section className="inspector-section">
+        <h3>📐 Schaalcontrole</h3>
+
+        {hasValidCalibration ? (
+          <>
+            <p className="muted">De plattegrond staat op schaal.</p>
+
+            <div className="info-row">
+              <span>Schaal</span>
+              <strong>{calibration.mmPerPixel.toFixed(3)} mm/px</strong>
+            </div>
+
+            {measuredMm != null &&
+            hasExpectedMm &&
+            differencePercent != null ? (
+              <>
+                <div className="info-row">
+                  <span>Volgens huidige schaal</span>
+                  <strong>{Math.round(measuredMm)} mm</strong>
+                </div>
+
+                <div className="info-row">
+                  <span>Verwachte maat</span>
+                  <strong>{Math.round(expectedMm)} mm</strong>
+                </div>
+
+                <div className="info-row">
+                  <span>Verschil</span>
+                  <strong>
+                    {Math.round(differenceMm)} mm /{" "}
+                    {differencePercent.toFixed(2)}%
+                  </strong>
+                </div>
+
+                <p className="muted">{getScaleCheckText()}</p>
+              </>
+            ) : (
+              <p className="muted">
+                Meet een tweede bekende afstand en vul de echte maat in om te
+                controleren.
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="muted">
+            Meet eerst een bekende afstand en klik op Gebruik als schaal.
+          </p>
+        )}
       </section>
 
       <section className="inspector-section">
@@ -121,35 +194,6 @@ function Inspector({
           </>
         ) : (
           <p className="muted">Klik op een meubel om het te selecteren.</p>
-        )}
-      </section>
-
-      <section className="inspector-section">
-        <h3>⚙️ Schaal</h3>
-
-        {calibration ? (
-          <>
-            <p className="muted">De plattegrond staat op schaal.</p>
-
-            <div className="info-row">
-              <span>Gemeten pixels</span>
-              <strong>{Math.round(calibration.pixels)} px</strong>
-            </div>
-
-            <div className="info-row">
-              <span>Werkelijke maat</span>
-              <strong>{calibration.millimeters} mm</strong>
-            </div>
-
-            <div className="info-row">
-              <span>Schaal</span>
-              <strong>{calibration.mmPerPixel.toFixed(3)} mm/px</strong>
-            </div>
-          </>
-        ) : (
-          <p className="muted">
-            Meet eerst een bekende afstand op de plattegrond.
-          </p>
         )}
       </section>
     </aside>

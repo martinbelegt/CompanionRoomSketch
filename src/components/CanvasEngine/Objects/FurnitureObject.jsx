@@ -1,4 +1,4 @@
-import { Group, Rect, Image } from "react-konva";
+import { Group, Rect, Image, Text } from "react-konva";
 import useImage from "use-image";
 
 function FurnitureObject({
@@ -96,6 +96,17 @@ function FurnitureObject({
         strokeWidth={selected ? 4 : 2}
         cornerRadius={10}
         fillEnabled={false}
+      />
+
+      <Text
+        text={item.name}
+        width={width}
+        align="center"
+        y={height / 2 - 8}
+        fontSize={16}
+        fontStyle="bold"
+        fill="#1e293b"
+        listening={false}
       />
 
       {selected && (

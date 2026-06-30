@@ -51,3 +51,28 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+.sidebar-furniture-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.sidebar-furniture-button {
+  flex: 1;
+}
+
+.sidebar-delete-button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sidebar-delete-button:hover {
+  background: #fecaca;
+}

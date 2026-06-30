@@ -1,0 +1,57 @@
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.dialog-card {
+  width: 360px;
+  background: white;
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.3);
+}
+
+.dialog-card h2 {
+  margin: 0 0 18px;
+}
+
+.dialog-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.dialog-card input {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.dialog-actions button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.dialog-actions .primary {
+  background: #2563eb;
+  color: white;
+  font-weight: 700;
+}

@@ -6,11 +6,30 @@ import Canvas from "../components/Canvas/Canvas";
 import Inspector from "../components/Inspector/Inspector";
 import StatusBar from "../components/StatusBar/StatusBar";
 import furnitureCatalog from "../data/furnitureCatalog";
+import NewFurnitureDialog from "../components/NewFurnitureDialog/NewFurnitureDialog";
 
 import "../styles/AppLayout.css";
+import { createCalibration } from "../measurement";
 
 function AppLayout() {
-  const [furniture, setFurniture] = useState([]);
+  const [furniture, setFurniture] = useState(() => {
+    const saved = localStorage.getItem("companion-roomsketch-placed-furniture");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(
+      "companion-roomsketch-placed-furniture",
+      JSON.stringify(furniture),
+    );
+  }, [furniture]);
+
+  function saveFurniture(nextFurniture) {
+    localStorage.setItem(
+      "companion-roomsketch-placed-furniture",
+      JSON.stringify(nextFurniture),
+    );
+  }
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
@@ -21,16 +40,42 @@ function AppLayout() {
     pixelDistance: null,
   });
 
-  const [calibration, setCalibration] = useState(null);
+  const [calibration, setCalibration] = useState(() => {
+    const saved = localStorage.getItem("companion-roomsketch-calibration");
+
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const [temporaryTool, setTemporaryTool] = useState(null);
 
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const [myFurniture, setMyFurniture] = useState(() => {
+    const saved = localStorage.getItem("companion-roomsketch-my-furniture");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   function addFurniture(catalogId) {
-    const template = furnitureCatalog[catalogId];
+    const template =
+      furnitureCatalog[catalogId] ??
+      myFurniture.find((item) => item.id === catalogId);
     if (!template) return;
 
     setPendingFurniture(template);
     setActiveTool("placeFurniture");
+  }
+
+  function saveNewFurniture(item) {
+    setMyFurniture((current) => {
+      const next = [...current, item];
+
+      localStorage.setItem(
+        "companion-roomsketch-my-furniture",
+        JSON.stringify(next),
+      );
+
+      return next;
+    });
   }
 
   function placePendingFurniture(position) {
@@ -49,10 +94,90 @@ function AppLayout() {
     setActiveTool("select");
   }
 
+  function snap(value, grid = 10) {
+    return Math.round(value / grid) * grid;
+  }
+
+  function snapNear(value, targets, threshold = 12) {
+    for (const target of targets) {
+      if (Math.abs(value - target) <= threshold) {
+        return target;
+      }
+    }
+
+    return value;
+  }
+
+  function getFurniturePixelSize(item) {
+    const mmPerPixel = calibration?.mmPerPixel ?? 10;
+
+    return {
+      width: item.widthMm / mmPerPixel,
+      height: item.depthMm / mmPerPixel,
+    };
+  }
+
+  function deleteMyFurniture(id) {
+    setMyFurniture((current) => {
+      const next = current.filter((item) => item.id !== id);
+
+      localStorage.setItem(
+        "companion-roomsketch-my-furniture",
+        JSON.stringify(next),
+      );
+
+      return next;
+    });
+  }
+
   function moveFurniture(id, position) {
-    setFurniture((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...position } : item)),
-    );
+    setFurniture((current) => {
+      const movingItem = current.find((item) => item.id === id);
+
+      if (!movingItem) return current;
+
+      const movingSize = getFurniturePixelSize(movingItem);
+
+      const otherItems = current.filter((item) => item.id !== id);
+
+      const snapTargetsX = [];
+      const snapTargetsY = [];
+
+      otherItems.forEach((item) => {
+        const size = getFurniturePixelSize(item);
+
+        const left = item.x;
+        const right = item.x + size.width;
+        const top = item.y;
+        const bottom = item.y + size.height;
+
+        snapTargetsX.push(left);
+        snapTargetsX.push(right);
+        snapTargetsX.push(left - movingSize.width);
+        snapTargetsX.push(right - movingSize.width);
+
+        snapTargetsY.push(top);
+        snapTargetsY.push(bottom);
+        snapTargetsY.push(top - movingSize.height);
+        snapTargetsY.push(bottom - movingSize.height);
+      });
+
+      const gridX = snap(position.x);
+      const gridY = snap(position.y);
+
+      const finalX = snapNear(gridX, snapTargetsX);
+      const finalY = snapNear(gridY, snapTargetsY);
+
+      return current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              x: finalX,
+              y: finalY,
+            }
+          : item,
+      );
+    });
   }
 
   function resizeFurniture(id, size) {
@@ -70,13 +195,23 @@ function AppLayout() {
   }
 
   function calibrate(realDistanceMm) {
-    if (!measurement.pixelDistance || !realDistanceMm) return;
+    const startPoint = measurement.points?.[0];
+    const endPoint = measurement.points?.[1];
 
-    setCalibration({
-      pixels: measurement.pixelDistance,
-      millimeters: realDistanceMm,
-      mmPerPixel: realDistanceMm / measurement.pixelDistance,
+    const nextCalibration = createCalibration({
+      startPoint,
+      endPoint,
+      realDistanceMm,
     });
+
+    if (!nextCalibration) return;
+
+    setCalibration(nextCalibration);
+
+    localStorage.setItem(
+      "companion-roomsketch-calibration",
+      JSON.stringify(nextCalibration),
+    );
   }
 
   function deleteSelectedFurniture() {
@@ -128,6 +263,30 @@ function AppLayout() {
 
         deleteSelectedFurniture();
       }
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)
+      ) {
+        if (!selectedFurnitureId) return;
+
+        e.preventDefault();
+
+        const step = e.shiftKey ? 10 : 1;
+
+        setFurniture((current) =>
+          current.map((item) => {
+            if (item.id !== selectedFurnitureId) return item;
+
+            if (e.code === "ArrowUp") return { ...item, y: item.y - step };
+            if (e.code === "ArrowDown") return { ...item, y: item.y + step };
+            if (e.code === "ArrowLeft") return { ...item, x: item.x - step };
+            if (e.code === "ArrowRight") return { ...item, x: item.x + step };
+
+            return item;
+          }),
+        );
+
+        return;
+      }
     }
 
     function handleKeyUp(e) {
@@ -152,6 +311,9 @@ function AppLayout() {
       <main className="workspace">
         <Sidebar
           onAddFurniture={addFurniture}
+          myFurniture={myFurniture}
+          onDeleteMyFurniture={deleteMyFurniture}
+          onNewFurniture={() => setDialogOpen(true)}
           activeTool={activeTool}
           onSelectTool={setActiveTool}
         />
@@ -183,6 +345,12 @@ function AppLayout() {
       </main>
 
       <StatusBar />
+
+      <NewFurnitureDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSave={saveNewFurniture}
+      />
     </div>
   );
 }

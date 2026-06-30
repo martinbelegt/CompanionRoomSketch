@@ -1,45 +1,40 @@
 import "./Sidebar.css";
 
-function Sidebar({ onAddFurniture, activeTool, onSelectTool }) {
+function Sidebar({
+  onAddFurniture,
+  myFurniture,
+  onDeleteMyFurniture,
+  onNewFurniture,
+  activeTool,
+  onSelectTool,
+}) {
   return (
     <aside className="sidebar">
       <button className="sidebar-button">📁 Project</button>
 
-      <div className="sidebar-section-title">Mijn meubels</div>
+      <div className="sidebar-section-title">🏠 Onze meubels</div>
 
-      <button
-        className="sidebar-button"
-        onClick={() => onAddFurniture("sofa2")}
-      >
-        🛋️ + 2-zits bank
-      </button>
+      {myFurniture.map((item) => (
+        <div key={item.id} className="sidebar-furniture-row">
+          <button
+            className="sidebar-button sidebar-furniture-button"
+            onClick={() => onAddFurniture(item.id)}
+          >
+            🧩 + {item.name}
+          </button>
 
-      <button
-        className="sidebar-button"
-        onClick={() => onAddFurniture("sofa3")}
-      >
-        🛋️ + 3-zits bank
-      </button>
+          <button
+            className="sidebar-delete-button"
+            onClick={() => onDeleteMyFurniture(item.id)}
+            title="Verwijder uit mijn meubels"
+          >
+            ×
+          </button>
+        </div>
+      ))}
 
-      <button
-        className="sidebar-button"
-        onClick={() => onAddFurniture("diningTable")}
-      >
-        🍽️ + Eettafel
-      </button>
-
-      <button
-        className="sidebar-button"
-        onClick={() => onAddFurniture("bed180")}
-      >
-        🛏️ + Bed 180
-      </button>
-
-      <button
-        className="sidebar-button"
-        onClick={() => onAddFurniture("cabinet")}
-      >
-        🗄️ + Kast
+      <button className="sidebar-button" onClick={onNewFurniture}>
+        ➕ Nieuw meubel
       </button>
 
       <div className="sidebar-section-title">Hulp</div>
@@ -67,6 +62,7 @@ function Sidebar({ onAddFurniture, activeTool, onSelectTool }) {
       >
         📏 Afstand meten
       </button>
+
       <button className="sidebar-button">💾 Opslaan</button>
     </aside>
   );
