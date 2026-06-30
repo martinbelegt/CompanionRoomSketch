@@ -1,23 +1,61 @@
 import "./Sidebar.css";
 
-function Sidebar({ onAddFurniture }) {
+function Sidebar({ onAddFurniture, activeTool, onSelectTool }) {
   return (
     <aside className="sidebar">
       <button className="sidebar-button">📁 Project</button>
 
-      <div className="sidebar-section-title">Meubels</div>
+      <div className="sidebar-section-title">Mijn meubels</div>
 
-      <button className="sidebar-button" onClick={() => onAddFurniture("sofa")}>
-        🛋️ + Bank
+      <button
+        className="sidebar-button"
+        onClick={() => onAddFurniture("sofa2")}
+      >
+        🛋️ + 2-zits bank
       </button>
 
-      <button className="sidebar-button disabled">🛏️ Bed</button>
-      <button className="sidebar-button disabled">🍽️ Tafel</button>
-      <button className="sidebar-button disabled">🪑 Stoel</button>
+      <button
+        className="sidebar-button"
+        onClick={() => onAddFurniture("sofa3")}
+      >
+        🛋️ + 3-zits bank
+      </button>
 
-      <div className="sidebar-section-title">Tools</div>
+      <button
+        className="sidebar-button"
+        onClick={() => onAddFurniture("diningTable")}
+      >
+        🍽️ + Eettafel
+      </button>
 
-      <button className="sidebar-button">📐 Meten</button>
+      <button
+        className="sidebar-button"
+        onClick={() => onAddFurniture("bed180")}
+      >
+        🛏️ + Bed 180
+      </button>
+
+      <button
+        className="sidebar-button"
+        onClick={() => onAddFurniture("cabinet")}
+      >
+        🗄️ + Kast
+      </button>
+
+      <div className="sidebar-section-title">Hulp</div>
+
+      <button
+        className="sidebar-button"
+        style={{
+          background: activeTool === "measure" ? "#2563eb" : "white",
+          color: activeTool === "measure" ? "white" : "#1e293b",
+        }}
+        onClick={() =>
+          onSelectTool(activeTool === "measure" ? "select" : "measure")
+        }
+      >
+        📏 Afstand meten
+      </button>
       <button className="sidebar-button">💾 Opslaan</button>
     </aside>
   );

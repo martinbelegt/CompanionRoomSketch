@@ -5,6 +5,7 @@ import Sidebar from "../components/Sidebar/Sidebar";
 import Canvas from "../components/Canvas/Canvas";
 import Inspector from "../components/Inspector/Inspector";
 import StatusBar from "../components/StatusBar/StatusBar";
+import furnitureCatalog from "../data/furnitureCatalog";
 
 import "../styles/AppLayout.css";
 
@@ -16,10 +17,14 @@ function AppLayout() {
       name: "Bank",
       x: 260,
       y: 260,
-      width: 220,
-      height: 90,
+      widthMm: 2100,
+      depthMm: 900,
     },
   ]);
+
+  const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
+  const [activeTool, setActiveTool] = useState("select");
+  const [pendingFurniture, setPendingFurniture] = useState(null);
 
   const [measurement, setMeasurement] = useState({
     points: [],
@@ -28,21 +33,28 @@ function AppLayout() {
 
   const [calibration, setCalibration] = useState(null);
 
-  function addFurniture(type) {
-    if (type !== "sofa") return;
+  function addFurniture(catalogId) {
+    const template = furnitureCatalog[catalogId];
+    if (!template) return;
 
-    setFurniture((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        type: "sofa",
-        name: "Bank",
-        x: 180 + current.length * 20,
-        y: 180 + current.length * 20,
-        width: 220,
-        height: 90,
-      },
-    ]);
+    setPendingFurniture(template);
+    setActiveTool("placeFurniture");
+  }
+
+  function placePendingFurniture(position) {
+    if (!pendingFurniture) return;
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      ...pendingFurniture,
+      x: position.x,
+      y: position.y,
+    };
+
+    setFurniture((current) => [...current, newItem]);
+    setSelectedFurnitureId(newItem.id);
+    setPendingFurniture(null);
+    setActiveTool("select");
   }
 
   function moveFurniture(id, position) {
@@ -61,24 +73,54 @@ function AppLayout() {
     });
   }
 
+  function deleteSelectedFurniture() {
+    if (!selectedFurnitureId) return;
+
+    setFurniture((current) =>
+      current.filter((item) => item.id !== selectedFurnitureId),
+    );
+
+    setSelectedFurnitureId(null);
+  }
+
+  function updateFurnitureSize(id, size) {
+    setFurniture((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...size } : item)),
+    );
+  }
+
   return (
     <div className="app-layout">
       <Toolbar />
 
       <main className="workspace">
-        <Sidebar onAddFurniture={addFurniture} />
+        <Sidebar
+          onAddFurniture={addFurniture}
+          activeTool={activeTool}
+          onSelectTool={setActiveTool}
+        />
 
         <Canvas
           furniture={furniture}
+          selectedFurnitureId={selectedFurnitureId}
+          onSelectFurniture={setSelectedFurnitureId}
           onMoveFurniture={moveFurniture}
           measurement={measurement}
           onMeasurementChange={setMeasurement}
+          calibration={calibration}
+          activeTool={activeTool}
+          pendingFurniture={pendingFurniture}
+          onPlaceFurniture={placePendingFurniture}
         />
 
         <Inspector
           measurement={measurement}
           calibration={calibration}
           onCalibrate={calibrate}
+          selectedFurnitureId={selectedFurnitureId}
+          furniture={furniture}
+          onUpdateFurnitureSize={updateFurnitureSize}
+          onDeleteSelectedFurniture={deleteSelectedFurniture}
         />
       </main>
 

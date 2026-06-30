@@ -10,6 +10,7 @@ import CursorLayer from "./Layers/CursorLayer";
 import FurnitureLayer from "./Layers/FurnitureLayer";
 import FloorplanLayer from "./Layers/FloorplanLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
+import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -18,19 +19,33 @@ function getDistance(pointA, pointB) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+function snapPointWithShift(pointA, pointB, shiftKey) {
+  if (!shiftKey || !pointA) return pointB;
+
+  const dx = pointB.x - pointA.x;
+  const dy = pointB.y - pointA.y;
+
+  return Math.abs(dx) >= Math.abs(dy)
+    ? { x: pointB.x, y: pointA.y }
+    : { x: pointA.x, y: pointB.y };
+}
+
 function CanvasEngine({
   furniture,
+  selectedFurnitureId,
+  onSelectFurniture,
   onMoveFurniture,
   measurement,
   onMeasurementChange,
+  calibration,
+  activeTool,
+  pendingFurniture,
+  onPlaceFurniture,
 }) {
   const { containerRef, width, height } = useCanvasSize();
-  const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
+  const { camera, zoomAtPointer } = useCanvasCamera();
 
-  const [cursor, setCursor] = useState({
-    x: 100,
-    y: 100,
-  });
+  const [cursor, setCursor] = useState({ x: 100, y: 100 });
 
   function getWorldPointer(stage) {
     const pointer = stage.getPointerPosition();
@@ -43,22 +58,47 @@ function CanvasEngine({
     };
   }
 
-  function handleStageClick(e) {
+  function updateCursor(e) {
     const stage = e.target.getStage();
-    const worldPointer = getWorldPointer(stage);
+    const pointer = getWorldPointer(stage);
 
-    if (!worldPointer) return;
+    if (pointer) setCursor(pointer);
+  }
 
-    setCursor(worldPointer);
+  function handleStageMouseDown(e) {
+    const stage = e.target.getStage();
+
+    if (e.target !== stage) return;
+
+    const rawPointer = getWorldPointer(stage);
+
+    if (!rawPointer) return;
+
+    setCursor(rawPointer);
+
+    if (activeTool === "placeFurniture") {
+      onPlaceFurniture(rawPointer);
+      return;
+    }
+
+    if (activeTool !== "measure") {
+      onSelectFurniture(null);
+      return;
+    }
 
     const currentPoints = measurement.points ?? [];
+    const pointA = currentPoints[0];
+
+    const worldPointer =
+      currentPoints.length === 1
+        ? snapPointWithShift(pointA, rawPointer, e.evt.shiftKey)
+        : rawPointer;
 
     if (currentPoints.length >= 2) {
       onMeasurementChange({
         points: [worldPointer],
         pixelDistance: null,
       });
-
       return;
     }
 
@@ -82,22 +122,33 @@ function CanvasEngine({
         y={camera.y}
         scaleX={camera.scale}
         scaleY={camera.scale}
-        draggable
-        onDragEnd={(e) =>
-          updatePosition({
-            x: e.target.x(),
-            y: e.target.y(),
-          })
-        }
+        draggable={false}
         onWheel={(e) => zoomAtPointer(e.target.getStage(), e)}
-        onClick={handleStageClick}
+        onMouseMove={updateCursor}
+        onMouseDown={handleStageMouseDown}
       >
         <Layer>
           <FloorplanLayer canvasWidth={width} canvasHeight={height} />
 
-          <FurnitureLayer furniture={furniture} onMove={onMoveFurniture} />
+          {activeTool === "placeFurniture" && (
+            <PendingFurnitureLayer
+              pendingFurniture={pendingFurniture}
+              cursor={cursor}
+              calibration={calibration}
+            />
+          )}
 
-          <MeasurementLayer points={measurement.points} />
+          <FurnitureLayer
+            furniture={furniture}
+            calibration={calibration}
+            selectedFurnitureId={selectedFurnitureId}
+            onSelectFurniture={onSelectFurniture}
+            onMove={onMoveFurniture}
+          />
+
+          {activeTool === "measure" && (
+            <MeasurementLayer points={measurement.points} />
+          )}
 
           <CursorLayer cursor={cursor} onMove={setCursor} />
         </Layer>
