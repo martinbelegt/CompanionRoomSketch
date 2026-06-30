@@ -16,8 +16,11 @@ function FurnitureObject({
   const width = item.widthMm / mmPerPixel;
   const height = item.depthMm / mmPerPixel;
 
-  function stopCanvasDrag(e) {
-    e.cancelBubble = true;
+  function setCursor(e, cursor) {
+    const stage = e.target.getStage();
+    if (!stage) return;
+
+    stage.container().style.cursor = cursor;
   }
 
   return (
@@ -27,6 +30,12 @@ function FurnitureObject({
       draggable={!preview}
       listening={!preview}
       opacity={preview ? 0.55 : 1}
+      onMouseEnter={(e) => {
+        if (!preview) setCursor(e, "grab");
+      }}
+      onMouseLeave={(e) => {
+        if (!preview) setCursor(e, "default");
+      }}
       onMouseDown={(e) => {
         e.cancelBubble = true;
         onSelect(item.id);
@@ -37,6 +46,7 @@ function FurnitureObject({
       }}
       onDragStart={(e) => {
         e.cancelBubble = true;
+        setCursor(e, "grabbing");
         onSelect(item.id);
       }}
       onDragMove={(e) => {
@@ -49,6 +59,8 @@ function FurnitureObject({
           x: e.target.x(),
           y: e.target.y(),
         });
+
+        setCursor(e, "grab");
       }}
     >
       {image ? (
@@ -72,6 +84,7 @@ function FurnitureObject({
         cornerRadius={10}
         fillEnabled={false}
       />
+
       {selected && (
         <>
           <Rect
@@ -84,7 +97,6 @@ function FurnitureObject({
             strokeWidth={3}
             cornerRadius={9}
           />
-
           <Rect
             x={width - 9}
             y={-9}
@@ -95,7 +107,6 @@ function FurnitureObject({
             strokeWidth={3}
             cornerRadius={9}
           />
-
           <Rect
             x={-9}
             y={height - 9}
@@ -106,7 +117,6 @@ function FurnitureObject({
             strokeWidth={3}
             cornerRadius={9}
           />
-
           <Rect
             x={width - 9}
             y={height - 9}

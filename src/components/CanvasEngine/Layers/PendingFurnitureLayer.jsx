@@ -13,8 +13,8 @@ function PendingFurnitureLayer({ pendingFurniture, cursor, calibration }) {
   return image ? (
     <Image
       image={image}
-      x={cursor.x}
-      y={cursor.y}
+      x={cursor.x - width / 2}
+      y={cursor.y - height / 2}
       width={width}
       height={height}
       opacity={0.45}
@@ -22,8 +22,8 @@ function PendingFurnitureLayer({ pendingFurniture, cursor, calibration }) {
     />
   ) : (
     <Rect
-      x={cursor.x}
-      y={cursor.y}
+      x={cursor.x - width / 2}
+      y={cursor.y - height / 2}
       width={width}
       height={height}
       fill="#dbeafe"
