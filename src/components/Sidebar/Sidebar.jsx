@@ -47,6 +47,17 @@ function Sidebar({ onAddFurniture, activeTool, onSelectTool }) {
       <button
         className="sidebar-button"
         style={{
+          background: activeTool === "pan" ? "#2563eb" : "white",
+          color: activeTool === "pan" ? "white" : "#1e293b",
+        }}
+        onClick={() => onSelectTool(activeTool === "pan" ? "select" : "pan")}
+      >
+        ✋ Plattegrond schuiven
+      </button>
+
+      <button
+        className="sidebar-button"
+        style={{
           background: activeTool === "measure" ? "#2563eb" : "white",
           color: activeTool === "measure" ? "white" : "#1e293b",
         }}

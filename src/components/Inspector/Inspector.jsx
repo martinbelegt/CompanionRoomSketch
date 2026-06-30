@@ -31,7 +31,12 @@ function Inspector({
   }, [selectedFurniture]);
 
   function handleCalibrate() {
-    onCalibrate(Number(realDistanceMm));
+    const normalizedValue = realDistanceMm.replace(",", ".");
+    const value = Number(normalizedValue);
+
+    if (!value || Number.isNaN(value)) return;
+
+    onCalibrate(value);
   }
 
   function handleSaveFurnitureSize() {
@@ -123,7 +128,24 @@ function Inspector({
         <h3>⚙️ Schaal</h3>
 
         {calibration ? (
-          <p className="muted">De plattegrond staat op schaal.</p>
+          <>
+            <p className="muted">De plattegrond staat op schaal.</p>
+
+            <div className="info-row">
+              <span>Gemeten pixels</span>
+              <strong>{Math.round(calibration.pixels)} px</strong>
+            </div>
+
+            <div className="info-row">
+              <span>Werkelijke maat</span>
+              <strong>{calibration.millimeters} mm</strong>
+            </div>
+
+            <div className="info-row">
+              <span>Schaal</span>
+              <strong>{calibration.mmPerPixel.toFixed(3)} mm/px</strong>
+            </div>
+          </>
         ) : (
           <p className="muted">
             Meet eerst een bekende afstand op de plattegrond.

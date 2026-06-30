@@ -41,9 +41,11 @@ function CanvasEngine({
   activeTool,
   pendingFurniture,
   onPlaceFurniture,
+  temporaryTool,
 }) {
   const { containerRef, width, height } = useCanvasSize();
-  const { camera, zoomAtPointer } = useCanvasCamera();
+  const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
+  const currentTool = temporaryTool ?? activeTool;
 
   const [cursor, setCursor] = useState({ x: 100, y: 100 });
 
@@ -76,12 +78,12 @@ function CanvasEngine({
 
     setCursor(rawPointer);
 
-    if (activeTool === "placeFurniture") {
+    if (currentTool === "placeFurniture") {
       onPlaceFurniture(rawPointer);
       return;
     }
 
-    if (activeTool !== "measure") {
+    if (currentTool !== "measure") {
       onSelectFurniture(null);
       return;
     }
@@ -122,7 +124,13 @@ function CanvasEngine({
         y={camera.y}
         scaleX={camera.scale}
         scaleY={camera.scale}
-        draggable={false}
+        draggable={currentTool === "pan"}
+        onDragEnd={(e) =>
+          updatePosition({
+            x: e.target.x(),
+            y: e.target.y(),
+          })
+        }
         onWheel={(e) => zoomAtPointer(e.target.getStage(), e)}
         onMouseMove={updateCursor}
         onMouseDown={handleStageMouseDown}
@@ -146,11 +154,11 @@ function CanvasEngine({
             onMove={onMoveFurniture}
           />
 
-          {activeTool === "measure" && (
+          {currentTool === "measure" && (
             <MeasurementLayer points={measurement.points} />
           )}
 
-          {activeTool === "measure" && (
+          {currentTool === "measure" && (
             <CursorLayer cursor={cursor} onMove={setCursor} />
           )}
         </Layer>

@@ -13,6 +13,7 @@ function Canvas({
   activeTool,
   pendingFurniture,
   onPlaceFurniture,
+  temporaryTool,
 }) {
   return (
     <CanvasEngine
@@ -26,6 +27,7 @@ function Canvas({
       activeTool={activeTool}
       pendingFurniture={pendingFurniture}
       onPlaceFurniture={onPlaceFurniture}
+      temporaryTool={temporaryTool}
     />
   );
 }

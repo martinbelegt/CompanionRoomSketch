@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Toolbar from "../components/Toolbar/Toolbar";
 import Sidebar from "../components/Sidebar/Sidebar";
@@ -10,17 +10,7 @@ import furnitureCatalog from "../data/furnitureCatalog";
 import "../styles/AppLayout.css";
 
 function AppLayout() {
-  const [furniture, setFurniture] = useState([
-    {
-      id: "sofa-001",
-      type: "sofa",
-      name: "Bank",
-      x: 260,
-      y: 260,
-      widthMm: 2100,
-      depthMm: 900,
-    },
-  ]);
+  const [furniture, setFurniture] = useState([]);
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
@@ -32,6 +22,8 @@ function AppLayout() {
   });
 
   const [calibration, setCalibration] = useState(null);
+
+  const [temporaryTool, setTemporaryTool] = useState(null);
 
   function addFurniture(catalogId) {
     const template = furnitureCatalog[catalogId];
@@ -89,6 +81,47 @@ function AppLayout() {
     );
   }
 
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.repeat) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        setTemporaryTool("pan");
+        return;
+      }
+
+      if (e.code === "Escape") {
+        setPendingFurniture(null);
+
+        setMeasurement({
+          points: [],
+          pixelDistance: null,
+        });
+
+        setSelectedFurnitureId(null);
+
+        setActiveTool("select");
+
+        setTemporaryTool(null);
+      }
+    }
+
+    function handleKeyUp(e) {
+      if (e.code === "Space") {
+        setTemporaryTool(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   return (
     <div className="app-layout">
       <Toolbar />
@@ -111,6 +144,7 @@ function AppLayout() {
           activeTool={activeTool}
           pendingFurniture={pendingFurniture}
           onPlaceFurniture={placePendingFurniture}
+          temporaryTool={temporaryTool}
         />
 
         <Inspector
