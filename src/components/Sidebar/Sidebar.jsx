@@ -7,6 +7,7 @@ function Sidebar({
   onNewFurniture,
   activeTool,
   onSelectTool,
+  onClearWalls,
 }) {
   return (
     <aside className="sidebar">
@@ -72,6 +73,10 @@ function Sidebar({
         onClick={() => onSelectTool(activeTool === "wall" ? "select" : "wall")}
       >
         🧱 Muren tekenen
+      </button>
+
+      <button className="sidebar-button" onClick={onClearWalls}>
+        🗑 Wis alle muren
       </button>
 
       <button className="sidebar-button">💾 Opslaan</button>

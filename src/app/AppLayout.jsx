@@ -35,6 +35,9 @@ function AppLayout() {
   function addWall(wall) {
     setWalls((current) => [...current, wall]);
   }
+  function clearWalls() {
+    setWalls([]);
+  }
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
@@ -321,6 +324,7 @@ function AppLayout() {
           onNewFurniture={() => setDialogOpen(true)}
           activeTool={activeTool}
           onSelectTool={setActiveTool}
+          onClearWalls={clearWalls}
         />
 
         <Canvas
