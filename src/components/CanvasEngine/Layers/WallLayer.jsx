@@ -29,9 +29,10 @@
 import { Line } from "react-konva";
 
 const WALL_COLOR = "#374151";
+const SELECTED_WALL_COLOR = "#2563eb";
 const WALL_WIDTH = 6;
 
-function WallLayer({ walls = [] }) {
+function WallLayer({ walls = [], selectedWallId, onSelectWall }) {
   if (walls.length === 0) {
     return null;
   }
@@ -47,10 +48,11 @@ function WallLayer({ walls = [] }) {
             wall.endPoint.x,
             wall.endPoint.y,
           ]}
-          stroke={WALL_COLOR}
+          stroke={wall.id === selectedWallId ? SELECTED_WALL_COLOR : WALL_COLOR}
           strokeWidth={WALL_WIDTH}
           lineCap="round"
           lineJoin="round"
+          onClick={() => onSelectWall(wall.id)}
         />
       ))}
     </>

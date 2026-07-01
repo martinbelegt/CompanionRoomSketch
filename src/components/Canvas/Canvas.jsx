@@ -36,6 +36,8 @@ function Canvas({
   onPlaceFurniture,
   temporaryTool,
   onResizeFurniture,
+  selectedWallId,
+  onSelectWall,
 }) {
   return (
     <CanvasEngine
@@ -53,6 +55,8 @@ function Canvas({
       onPlaceFurniture={onPlaceFurniture}
       temporaryTool={temporaryTool}
       onResizeFurniture={onResizeFurniture}
+      selectedWallId={selectedWallId}
+      onSelectWall={onSelectWall}
     />
   );
 }

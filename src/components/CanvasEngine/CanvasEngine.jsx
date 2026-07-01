@@ -65,6 +65,8 @@ function CanvasEngine({
   onPlaceFurniture,
   temporaryTool,
   onResizeFurniture,
+  selectedWallId,
+  onSelectWall,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
@@ -238,7 +240,11 @@ function CanvasEngine({
         <Layer>
           <FloorplanLayer canvasWidth={width} canvasHeight={height} />
 
-          <WallLayer walls={walls} />
+          <WallLayer
+            walls={walls}
+            selectedWallId={selectedWallId}
+            onSelectWall={onSelectWall}
+          />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={

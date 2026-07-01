@@ -31,6 +31,7 @@ function AppLayout() {
   const [walls, setWalls] = useState(() =>
     loadFromStorage(STORAGE_KEYS.walls, []),
   );
+  const [selectedWallId, setSelectedWallId] = useState(null);
 
   function addWall(wall) {
     setWalls((current) => [...current, wall]);
@@ -342,6 +343,8 @@ function AppLayout() {
           onPlaceFurniture={placePendingFurniture}
           temporaryTool={temporaryTool}
           onResizeFurniture={resizeFurniture}
+          selectedWallId={selectedWallId}
+          onSelectWall={setSelectedWallId}
         />
 
         <Inspector
