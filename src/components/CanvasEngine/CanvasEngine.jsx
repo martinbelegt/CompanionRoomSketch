@@ -13,6 +13,7 @@ import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 
 import { measureDistance } from "../../measurement";
+import { DimensionLine } from "../../measurement";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -127,6 +128,10 @@ function CanvasEngine({
     onMeasurementChange({
       points: nextPoints,
       pixelDistance,
+      distanceMm:
+        pixelDistance != null && calibration?.mmPerPixel
+          ? pixelDistance * calibration.mmPerPixel
+          : null,
     });
   }
 
@@ -173,6 +178,15 @@ function CanvasEngine({
           {currentTool === "measure" && (
             <MeasurementLayer points={measurement.points} />
           )}
+
+          {measurement.points?.length === 2 &&
+            measurement.distanceMm != null && (
+              <DimensionLine
+                startPoint={measurement.points[0]}
+                endPoint={measurement.points[1]}
+                distanceMm={measurement.distanceMm}
+              />
+            )}
 
           {currentTool === "measure" && (
             <CursorLayer cursor={cursor} onMove={setCursor} />
