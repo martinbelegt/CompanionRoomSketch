@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import "./CanvasEngine.css";
 
@@ -66,6 +66,11 @@ function CanvasEngine({
 
   const [cursor, setCursor] = useState({ x: 100, y: 100 });
   const [wallStartPoint, setWallStartPoint] = useState(null);
+  useEffect(() => {
+    if (currentTool !== "wall") {
+      setWallStartPoint(null);
+    }
+  }, [currentTool]);
 
   function getWorldPointer(stage) {
     const pointer = stage.getPointerPosition();
