@@ -12,7 +12,6 @@ import FloorplanLayer from "./Layers/FloorplanLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 
-import { measureDistance } from "../../measurement";
 import { DimensionLine } from "../../measurement";
 
 function getDistance(pointA, pointB) {
@@ -31,6 +30,14 @@ function snapPointWithShift(pointA, pointB, shiftKey) {
   return Math.abs(dx) >= Math.abs(dy)
     ? { x: pointB.x, y: pointA.y }
     : { x: pointA.x, y: pointB.y };
+}
+
+function getMeasuredDistanceMm(pixelDistance, calibration) {
+  if (pixelDistance == null || !calibration?.mmPerPixel) {
+    return null;
+  }
+
+  return pixelDistance * calibration.mmPerPixel;
 }
 
 function CanvasEngine({
@@ -93,30 +100,22 @@ function CanvasEngine({
     }
 
     const currentPoints = measurement.points ?? [];
+
+    if (currentPoints.length >= 2) {
+      onMeasurementChange({
+        points: [rawPointer],
+        pixelDistance: null,
+        distanceMm: null,
+      });
+      return;
+    }
+
     const pointA = currentPoints[0];
 
     const worldPointer =
       currentPoints.length === 1
         ? snapPointWithShift(pointA, rawPointer, e.evt.shiftKey)
         : rawPointer;
-
-    if (currentPoints.length >= 2) {
-      const measurementResult =
-        nextPoints.length === 2
-          ? measureDistance({
-              startPoint: nextPoints[0],
-              endPoint: nextPoints[1],
-              calibration,
-            })
-          : null;
-
-      onMeasurementChange({
-        points: nextPoints,
-        pixelDistance: measurementResult?.pixelDistance ?? null,
-        distanceMm: measurementResult?.distanceMm ?? null,
-      });
-      return;
-    }
 
     const nextPoints = [...currentPoints, worldPointer];
 
@@ -128,12 +127,21 @@ function CanvasEngine({
     onMeasurementChange({
       points: nextPoints,
       pixelDistance,
-      distanceMm:
-        pixelDistance != null && calibration?.mmPerPixel
-          ? pixelDistance * calibration.mmPerPixel
-          : null,
+      distanceMm: getMeasuredDistanceMm(pixelDistance, calibration),
     });
   }
+
+  const measurementPoints = measurement.points ?? [];
+  const livePointA = measurementPoints[0];
+  const hasLiveMeasurement =
+    currentTool === "measure" &&
+    measurementPoints.length === 1 &&
+    calibration?.mmPerPixel;
+
+  const livePixelDistance =
+    hasLiveMeasurement && livePointA ? getDistance(livePointA, cursor) : null;
+
+  const liveDistanceMm = getMeasuredDistanceMm(livePixelDistance, calibration);
 
   return (
     <div className="canvas-engine" ref={containerRef}>
@@ -176,17 +184,24 @@ function CanvasEngine({
           />
 
           {currentTool === "measure" && (
-            <MeasurementLayer points={measurement.points} />
+            <MeasurementLayer points={measurementPoints} />
           )}
 
-          {measurement.points?.length === 2 &&
-            measurement.distanceMm != null && (
-              <DimensionLine
-                startPoint={measurement.points[0]}
-                endPoint={measurement.points[1]}
-                distanceMm={measurement.distanceMm}
-              />
-            )}
+          {hasLiveMeasurement && liveDistanceMm != null && (
+            <DimensionLine
+              startPoint={livePointA}
+              endPoint={cursor}
+              distanceMm={liveDistanceMm}
+            />
+          )}
+
+          {measurementPoints.length === 2 && measurement.distanceMm != null && (
+            <DimensionLine
+              startPoint={measurementPoints[0]}
+              endPoint={measurementPoints[1]}
+              distanceMm={measurement.distanceMm}
+            />
+          )}
 
           {currentTool === "measure" && (
             <CursorLayer cursor={cursor} onMove={setCursor} />
