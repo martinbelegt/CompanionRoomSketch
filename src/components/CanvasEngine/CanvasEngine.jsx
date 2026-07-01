@@ -16,7 +16,7 @@ import WallLayer from "./Layers/WallLayer";
 import { DimensionLine } from "../../measurement";
 
 import WallPreviewLayer from "./Layers/WallPreviewLayer";
-import { createWall } from "../../walls/wallUtils";
+import { createWall, snapToWallEndpoints } from "../../walls/wallUtils";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -131,13 +131,15 @@ function CanvasEngine({
     setCursor(rawPointer);
     if (currentTool === "wall") {
       if (!wallStartPoint) {
-        setWallStartPoint(rawPointer);
+        setWallStartPoint(snapToWallEndpoints(rawPointer, walls));
         return;
       }
 
+      const snappedPoint = snapToWallEndpoints(rawPointer, walls);
+
       const endPoint = snapPointWithShift(
         wallStartPoint,
-        rawPointer,
+        snappedPoint,
         e.evt.shiftKey,
       );
 
