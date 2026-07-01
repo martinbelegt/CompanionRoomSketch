@@ -63,6 +63,17 @@ function Sidebar({
         📏 Afstand meten
       </button>
 
+      <button
+        className="sidebar-button"
+        style={{
+          background: activeTool === "wall" ? "#2563eb" : "white",
+          color: activeTool === "wall" ? "white" : "#1e293b",
+        }}
+        onClick={() => onSelectTool(activeTool === "wall" ? "select" : "wall")}
+      >
+        🧱 Muren tekenen
+      </button>
+
       <button className="sidebar-button">💾 Opslaan</button>
     </aside>
   );

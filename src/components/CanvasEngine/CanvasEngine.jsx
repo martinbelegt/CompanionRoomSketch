@@ -15,6 +15,9 @@ import WallLayer from "./Layers/WallLayer";
 
 import { DimensionLine } from "../../measurement";
 
+import WallPreviewLayer from "./Layers/WallPreviewLayer";
+import { createWall } from "../../walls/wallUtils";
+
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
   const dy = pointB.y - pointA.y;
@@ -62,6 +65,7 @@ function CanvasEngine({
   const currentTool = temporaryTool ?? activeTool;
 
   const [cursor, setCursor] = useState({ x: 100, y: 100 });
+  const [wallStartPoint, setWallStartPoint] = useState(null);
 
   function getWorldPointer(stage) {
     const pointer = stage.getPointerPosition();
@@ -84,13 +88,33 @@ function CanvasEngine({
   function handleStageMouseDown(e) {
     const stage = e.target.getStage();
 
-    if (currentTool !== "measure" && e.target !== stage) return;
+    if (
+      currentTool !== "measure" &&
+      currentTool !== "wall" &&
+      e.target !== stage
+    ) {
+      return;
+    }
 
     const rawPointer = getWorldPointer(stage);
 
     if (!rawPointer) return;
 
     setCursor(rawPointer);
+    if (currentTool === "wall") {
+      if (!wallStartPoint) {
+        setWallStartPoint(rawPointer);
+        return;
+      }
+
+      const wall = createWall(wallStartPoint, rawPointer);
+
+      addWall(wall);
+
+      setWallStartPoint(null);
+
+      return;
+    }
 
     if (currentTool === "placeFurniture") {
       onPlaceFurniture(rawPointer);
@@ -170,6 +194,10 @@ function CanvasEngine({
           <FloorplanLayer canvasWidth={width} canvasHeight={height} />
 
           <WallLayer walls={walls} />
+          <WallPreviewLayer
+            startPoint={currentTool === "wall" ? wallStartPoint : null}
+            endPoint={cursor}
+          />
 
           {activeTool === "placeFurniture" && (
             <PendingFurnitureLayer

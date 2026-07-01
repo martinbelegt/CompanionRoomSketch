@@ -23,10 +23,6 @@ function loadFromStorage(key, fallback) {
   return saved ? JSON.parse(saved) : fallback;
 }
 
-function addWall(wall) {
-  setWalls((current) => [...current, wall]);
-}
-
 function AppLayout() {
   const [furniture, setFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.furniture, []),
@@ -35,6 +31,10 @@ function AppLayout() {
   const [walls, setWalls] = useState(() =>
     loadFromStorage(STORAGE_KEYS.walls, []),
   );
+
+  function addWall(wall) {
+    setWalls((current) => [...current, wall]);
+  }
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
@@ -326,6 +326,7 @@ function AppLayout() {
         <Canvas
           furniture={furniture}
           walls={walls}
+          addWall={addWall}
           selectedFurnitureId={selectedFurnitureId}
           onSelectFurniture={setSelectedFurnitureId}
           onMoveFurniture={moveFurniture}
