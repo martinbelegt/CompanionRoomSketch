@@ -243,7 +243,11 @@ function CanvasEngine({
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={
               currentTool === "wall" && wallStartPoint
-                ? snapPointWithShift(wallStartPoint, cursor, shiftPressed)
+                ? snapPointWithShift(
+                    wallStartPoint,
+                    snapPoint ?? cursor,
+                    shiftPressed,
+                  )
                 : cursor
             }
           />
