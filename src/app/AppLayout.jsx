@@ -23,6 +23,10 @@ function loadFromStorage(key, fallback) {
   return saved ? JSON.parse(saved) : fallback;
 }
 
+function addWall(wall) {
+  setWalls((current) => [...current, wall]);
+}
+
 function AppLayout() {
   const [furniture, setFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.furniture, []),
