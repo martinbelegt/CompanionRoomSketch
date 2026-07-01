@@ -112,7 +112,13 @@ function CanvasEngine({
         return;
       }
 
-      const wall = createWall(wallStartPoint, rawPointer);
+      const endPoint = snapPointWithShift(
+        wallStartPoint,
+        rawPointer,
+        e.evt.shiftKey,
+      );
+
+      const wall = createWall(wallStartPoint, endPoint);
 
       addWall(wall);
 
@@ -201,7 +207,15 @@ function CanvasEngine({
           <WallLayer walls={walls} />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
-            endPoint={cursor}
+            endPoint={
+              currentTool === "wall" && wallStartPoint
+                ? snapPointWithShift(
+                    wallStartPoint,
+                    cursor,
+                    false, // straks vervangen
+                  )
+                : cursor
+            }
           />
 
           {activeTool === "placeFurniture" && (
