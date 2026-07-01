@@ -16,7 +16,13 @@ import WallLayer from "./Layers/WallLayer";
 import { DimensionLine } from "../../measurement";
 
 import WallPreviewLayer from "./Layers/WallPreviewLayer";
-import { createWall, snapToWallEndpoints } from "../../walls/wallUtils";
+import {
+  createWall,
+  snapToWallEndpoints,
+  findSnapPoint,
+} from "../../walls/wallUtils";
+
+import SnapIndicatorLayer from "./Layers/SnapIndicatorLayer";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -206,6 +212,9 @@ function CanvasEngine({
 
   const liveDistanceMm = getMeasuredDistanceMm(livePixelDistance, calibration);
 
+  const snapPoint =
+    currentTool === "wall" ? findSnapPoint(cursor, walls) : null;
+
   return (
     <div className="canvas-engine" ref={containerRef}>
       <Stage
@@ -238,6 +247,7 @@ function CanvasEngine({
                 : cursor
             }
           />
+          <SnapIndicatorLayer point={snapPoint} />
 
           {activeTool === "placeFurniture" && (
             <PendingFurnitureLayer
