@@ -11,6 +11,7 @@ import FurnitureLayer from "./Layers/FurnitureLayer";
 import FloorplanLayer from "./Layers/FloorplanLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
+import WallLayer from "./Layers/WallLayer";
 
 import { DimensionLine } from "../../measurement";
 
@@ -42,6 +43,7 @@ function getMeasuredDistanceMm(pixelDistance, calibration) {
 
 function CanvasEngine({
   furniture,
+  walls,
   selectedFurnitureId,
   onSelectFurniture,
   onMoveFurniture,
@@ -165,6 +167,8 @@ function CanvasEngine({
       >
         <Layer>
           <FloorplanLayer canvasWidth={width} canvasHeight={height} />
+
+          <WallLayer walls={walls} />
 
           {activeTool === "placeFurniture" && (
             <PendingFurnitureLayer
