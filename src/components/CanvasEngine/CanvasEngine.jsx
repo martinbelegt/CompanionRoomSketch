@@ -63,6 +63,7 @@ function CanvasEngine({
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
   const currentTool = temporaryTool ?? activeTool;
+  const [shiftPressed, setShiftPressed] = useState(false);
 
   const [cursor, setCursor] = useState({ x: 100, y: 100 });
   const [wallStartPoint, setWallStartPoint] = useState(null);
@@ -71,6 +72,28 @@ function CanvasEngine({
       setWallStartPoint(null);
     }
   }, [currentTool]);
+
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "Shift") {
+        setShiftPressed(true);
+      }
+    }
+
+    function handleKeyUp(e) {
+      if (e.key === "Shift") {
+        setShiftPressed(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   function getWorldPointer(stage) {
     const pointer = stage.getPointerPosition();
@@ -209,11 +232,7 @@ function CanvasEngine({
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={
               currentTool === "wall" && wallStartPoint
-                ? snapPointWithShift(
-                    wallStartPoint,
-                    cursor,
-                    false, // straks vervangen
-                  )
+                ? snapPointWithShift(wallStartPoint, cursor, shiftPressed)
                 : cursor
             }
           />
