@@ -11,25 +11,26 @@ import NewFurnitureDialog from "../components/NewFurnitureDialog/NewFurnitureDia
 import "../styles/AppLayout.css";
 import { createCalibration } from "../measurement";
 
+const STORAGE_KEYS = {
+  furniture: "companion-roomsketch-placed-furniture",
+  calibration: "companion-roomsketch-calibration",
+  myFurniture: "companion-roomsketch-my-furniture",
+  walls: "companion-roomsketch-walls",
+};
+
+function loadFromStorage(key, fallback) {
+  const saved = localStorage.getItem(key);
+  return saved ? JSON.parse(saved) : fallback;
+}
+
 function AppLayout() {
-  const [furniture, setFurniture] = useState(() => {
-    const saved = localStorage.getItem("companion-roomsketch-placed-furniture");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [furniture, setFurniture] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.furniture, []),
+  );
 
-  useEffect(() => {
-    localStorage.setItem(
-      "companion-roomsketch-placed-furniture",
-      JSON.stringify(furniture),
-    );
-  }, [furniture]);
-
-  function saveFurniture(nextFurniture) {
-    localStorage.setItem(
-      "companion-roomsketch-placed-furniture",
-      JSON.stringify(nextFurniture),
-    );
-  }
+  const [walls, setWalls] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.walls, []),
+  );
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
@@ -38,27 +39,33 @@ function AppLayout() {
   const [measurement, setMeasurement] = useState({
     points: [],
     pixelDistance: null,
+    distanceMm: null,
   });
 
-  const [calibration, setCalibration] = useState(() => {
-    const saved = localStorage.getItem("companion-roomsketch-calibration");
-
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [calibration, setCalibration] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.calibration, null),
+  );
 
   const [temporaryTool, setTemporaryTool] = useState(null);
-
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const [myFurniture, setMyFurniture] = useState(() => {
-    const saved = localStorage.getItem("companion-roomsketch-my-furniture");
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [myFurniture, setMyFurniture] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.myFurniture, []),
+  );
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.furniture, JSON.stringify(furniture));
+  }, [furniture]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.walls, JSON.stringify(walls));
+  }, [walls]);
 
   function addFurniture(catalogId) {
     const template =
       furnitureCatalog[catalogId] ??
       myFurniture.find((item) => item.id === catalogId);
+
     if (!template) return;
 
     setPendingFurniture(template);
@@ -69,10 +76,7 @@ function AppLayout() {
     setMyFurniture((current) => {
       const next = [...current, item];
 
-      localStorage.setItem(
-        "companion-roomsketch-my-furniture",
-        JSON.stringify(next),
-      );
+      localStorage.setItem(STORAGE_KEYS.myFurniture, JSON.stringify(next));
 
       return next;
     });
@@ -121,10 +125,7 @@ function AppLayout() {
     setMyFurniture((current) => {
       const next = current.filter((item) => item.id !== id);
 
-      localStorage.setItem(
-        "companion-roomsketch-my-furniture",
-        JSON.stringify(next),
-      );
+      localStorage.setItem(STORAGE_KEYS.myFurniture, JSON.stringify(next));
 
       return next;
     });
@@ -137,7 +138,6 @@ function AppLayout() {
       if (!movingItem) return current;
 
       const movingSize = getFurniturePixelSize(movingItem);
-
       const otherItems = current.filter((item) => item.id !== id);
 
       const snapTargetsX = [];
@@ -151,15 +151,18 @@ function AppLayout() {
         const top = item.y;
         const bottom = item.y + size.height;
 
-        snapTargetsX.push(left);
-        snapTargetsX.push(right);
-        snapTargetsX.push(left - movingSize.width);
-        snapTargetsX.push(right - movingSize.width);
-
-        snapTargetsY.push(top);
-        snapTargetsY.push(bottom);
-        snapTargetsY.push(top - movingSize.height);
-        snapTargetsY.push(bottom - movingSize.height);
+        snapTargetsX.push(
+          left,
+          right,
+          left - movingSize.width,
+          right - movingSize.width,
+        );
+        snapTargetsY.push(
+          top,
+          bottom,
+          top - movingSize.height,
+          bottom - movingSize.height,
+        );
       });
 
       const gridX = snap(position.x);
@@ -209,7 +212,7 @@ function AppLayout() {
     setCalibration(nextCalibration);
 
     localStorage.setItem(
-      "companion-roomsketch-calibration",
+      STORAGE_KEYS.calibration,
       JSON.stringify(nextCalibration),
     );
   }
@@ -248,21 +251,21 @@ function AppLayout() {
         setMeasurement({
           points: [],
           pixelDistance: null,
+          distanceMm: null,
         });
 
         setSelectedFurnitureId(null);
-
         setActiveTool("select");
-
         setTemporaryTool(null);
 
         return;
       }
+
       if (e.code === "Delete") {
         if (!selectedFurnitureId) return;
-
         deleteSelectedFurniture();
       }
+
       if (
         ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)
       ) {
@@ -284,8 +287,6 @@ function AppLayout() {
             return item;
           }),
         );
-
-        return;
       }
     }
 
@@ -320,6 +321,7 @@ function AppLayout() {
 
         <Canvas
           furniture={furniture}
+          walls={walls}
           selectedFurnitureId={selectedFurnitureId}
           onSelectFurniture={setSelectedFurnitureId}
           onMoveFurniture={moveFurniture}
