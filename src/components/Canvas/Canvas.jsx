@@ -38,6 +38,7 @@ function Canvas({
   onResizeFurniture,
   selectedWallId,
   onSelectWall,
+  onUpdateWallPoint,
 }) {
   return (
     <CanvasEngine
@@ -57,6 +58,7 @@ function Canvas({
       onResizeFurniture={onResizeFurniture}
       selectedWallId={selectedWallId}
       onSelectWall={onSelectWall}
+      onUpdateWallPoint={onUpdateWallPoint}
     />
   );
 }

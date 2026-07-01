@@ -67,6 +67,7 @@ function CanvasEngine({
   onResizeFurniture,
   selectedWallId,
   onSelectWall,
+  onUpdateWallPoint,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
@@ -137,6 +138,12 @@ function CanvasEngine({
     if (!rawPointer) return;
 
     setCursor(rawPointer);
+
+    if (currentTool === "wall" && selectedWallId && !wallStartPoint) {
+      onSelectWall(null);
+      return;
+    }
+
     if (currentTool === "wall") {
       if (!wallStartPoint) {
         setWallStartPoint(snapToWallEndpoints(rawPointer, walls));
@@ -167,6 +174,7 @@ function CanvasEngine({
 
     if (currentTool !== "measure") {
       onSelectFurniture(null);
+      onSelectWall(null);
       return;
     }
 
@@ -226,13 +234,19 @@ function CanvasEngine({
         y={camera.y}
         scaleX={camera.scale}
         scaleY={camera.scale}
-        draggable={currentTool === "pan"}
-        onDragEnd={(e) =>
+        draggable={currentTool === "pan" && !selectedWallId}
+        onDragEnd={(e) => {
+          const stage = e.target.getStage();
+
+          if (e.target !== stage) {
+            return;
+          }
+
           updatePosition({
             x: e.target.x(),
             y: e.target.y(),
-          })
-        }
+          });
+        }}
         onWheel={(e) => zoomAtPointer(e.target.getStage(), e)}
         onMouseMove={updateCursor}
         onMouseDown={handleStageMouseDown}
@@ -244,6 +258,7 @@ function CanvasEngine({
             walls={walls}
             selectedWallId={selectedWallId}
             onSelectWall={onSelectWall}
+            onUpdateWallPoint={onUpdateWallPoint}
           />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}

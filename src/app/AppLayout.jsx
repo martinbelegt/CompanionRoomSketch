@@ -242,6 +242,19 @@ function AppLayout() {
     setSelectedWallId(null);
   }
 
+  function updateWallPoint(id, pointName, position) {
+    setWalls((current) =>
+      current.map((wall) =>
+        wall.id === id
+          ? {
+              ...wall,
+              [pointName]: position,
+            }
+          : wall,
+      ),
+    );
+  }
+
   function updateFurnitureSize(id, size) {
     setFurniture((current) =>
       current.map((item) => (item.id === id ? { ...item, ...size } : item)),
@@ -360,6 +373,7 @@ function AppLayout() {
           onResizeFurniture={resizeFurniture}
           selectedWallId={selectedWallId}
           onSelectWall={setSelectedWallId}
+          onUpdateWallPoint={updateWallPoint}
         />
 
         <Inspector
