@@ -234,6 +234,13 @@ function AppLayout() {
 
     setSelectedFurnitureId(null);
   }
+  function deleteSelectedWall() {
+    if (!selectedWallId) return;
+
+    setWalls((current) => current.filter((wall) => wall.id !== selectedWallId));
+
+    setSelectedWallId(null);
+  }
 
   function updateFurnitureSize(id, size) {
     setFurniture((current) =>
@@ -270,8 +277,16 @@ function AppLayout() {
       }
 
       if (e.code === "Delete") {
-        if (!selectedFurnitureId) return;
-        deleteSelectedFurniture();
+        if (selectedWallId) {
+          deleteSelectedWall();
+          return;
+        }
+
+        if (selectedFurnitureId) {
+          deleteSelectedFurniture();
+        }
+
+        return;
       }
 
       if (
@@ -311,7 +326,7 @@ function AppLayout() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [selectedFurnitureId]);
+  }, [selectedFurnitureId, selectedWallId]);
 
   return (
     <div className="app-layout">
