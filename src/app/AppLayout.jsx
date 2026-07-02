@@ -261,6 +261,16 @@ function AppLayout() {
     setSelectedWallId(null);
   }
 
+  function deleteSelectedDoor() {
+    if (selectedObject?.type !== "door") return;
+
+    setDoors((current) =>
+      current.filter((door) => door.id !== selectedObject.id),
+    );
+
+    setSelectedObject(null);
+  }
+
   function updateWallPoint(id, pointName, position) {
     setWalls((current) =>
       current.map((wall) =>
@@ -309,6 +319,11 @@ function AppLayout() {
       }
 
       if (e.code === "Delete") {
+        if (selectedObject?.type === "door") {
+          deleteSelectedDoor();
+          return;
+        }
+
         if (selectedWallId) {
           deleteSelectedWall();
           return;
@@ -358,7 +373,7 @@ function AppLayout() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [selectedFurnitureId, selectedWallId]);
+  }, [selectedFurnitureId, selectedWallId, selectedObject]);
 
   return (
     <div className="app-layout">
