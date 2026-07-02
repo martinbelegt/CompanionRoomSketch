@@ -53,7 +53,9 @@ function getMeasuredDistanceMm(pixelDistance, calibration) {
 function CanvasEngine({
   furniture,
   walls,
+  doors,
   addWall,
+  addDoor,
   selectedFurnitureId,
   onSelectFurniture,
   onMoveFurniture,

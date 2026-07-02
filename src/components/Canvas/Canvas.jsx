@@ -24,7 +24,9 @@ import CanvasEngine from "../CanvasEngine/CanvasEngine";
 function Canvas({
   furniture,
   walls,
+  doors,
   addWall,
+  addDoor,
   selectedFurnitureId,
   onSelectFurniture,
   onMoveFurniture,
@@ -44,7 +46,9 @@ function Canvas({
     <CanvasEngine
       furniture={furniture}
       walls={walls}
+      doors={doors}
       addWall={addWall}
+      addDoor={addDoor}
       selectedFurnitureId={selectedFurnitureId}
       onSelectFurniture={onSelectFurniture}
       onMoveFurniture={onMoveFurniture}

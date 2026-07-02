@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   calibration: "companion-roomsketch-calibration",
   myFurniture: "companion-roomsketch-my-furniture",
   walls: "companion-roomsketch-walls",
+  doors: "companion-roomsketch-doors",
 };
 
 function loadFromStorage(key, fallback) {
@@ -31,10 +32,18 @@ function AppLayout() {
   const [walls, setWalls] = useState(() =>
     loadFromStorage(STORAGE_KEYS.walls, []),
   );
+
+  const [doors, setDoors] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.doors, []),
+  );
+
   const [selectedWallId, setSelectedWallId] = useState(null);
 
   function addWall(wall) {
     setWalls((current) => [...current, wall]);
+  }
+  function addDoor(door) {
+    setDoors((current) => [...current, door]);
   }
   function clearWalls() {
     setWalls([]);
@@ -68,6 +77,10 @@ function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.walls, JSON.stringify(walls));
   }, [walls]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.doors, JSON.stringify(doors));
+  }, [doors]);
 
   function addFurniture(catalogId) {
     const template =
@@ -359,7 +372,9 @@ function AppLayout() {
         <Canvas
           furniture={furniture}
           walls={walls}
+          doors={doors}
           addWall={addWall}
+          addDoor={addDoor}
           selectedFurnitureId={selectedFurnitureId}
           onSelectFurniture={setSelectedFurnitureId}
           onMoveFurniture={moveFurniture}
