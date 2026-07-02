@@ -66,6 +66,7 @@ function CanvasEngine({
   doors,
   addWall,
   addDoor,
+  onUpdateDoorPosition,
   selectedFurnitureId,
   onSelectFurniture,
   onMoveFurniture,
@@ -295,6 +296,7 @@ function CanvasEngine({
             walls={walls}
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
+            onUpdateDoorPosition={onUpdateDoorPosition}
           />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}

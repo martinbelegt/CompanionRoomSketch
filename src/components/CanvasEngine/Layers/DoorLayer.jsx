@@ -1,4 +1,4 @@
-import { Line } from "react-konva";
+import { Group, Line } from "react-konva";
 
 const DOOR_COLOR = "#92400e";
 const DOOR_SELECTED_COLOR = "#2563eb";
@@ -12,20 +12,56 @@ function getWallCenter(wall) {
   };
 }
 
-function getWallNormal(wall) {
+function getWallDirection(wall) {
   const dx = wall.endPoint.x - wall.startPoint.x;
   const dy = wall.endPoint.y - wall.startPoint.y;
   const length = Math.sqrt(dx * dx + dy * dy);
 
-  if (!length) return { x: 0, y: 0 };
+  if (!length) return { x: 1, y: 0 };
 
   return {
-    x: -dy / length,
-    y: dx / length,
+    x: dx / length,
+    y: dy / length,
   };
 }
 
-function DoorLayer({ doors = [], walls = [], selectedObject, onSelectObject }) {
+function getWallNormal(wall) {
+  const direction = getWallDirection(wall);
+
+  return {
+    x: -direction.y,
+    y: direction.x,
+  };
+}
+
+function projectPointToWall(point, wall) {
+  const direction = getWallDirection(wall);
+
+  const vx = point.x - wall.startPoint.x;
+  const vy = point.y - wall.startPoint.y;
+
+  const wallLength =
+    Math.sqrt(
+      (wall.endPoint.x - wall.startPoint.x) ** 2 +
+        (wall.endPoint.y - wall.startPoint.y) ** 2,
+    ) || 1;
+
+  const distanceAlongWall = vx * direction.x + vy * direction.y;
+  const clampedDistance = Math.max(0, Math.min(wallLength, distanceAlongWall));
+
+  return {
+    x: wall.startPoint.x + direction.x * clampedDistance,
+    y: wall.startPoint.y + direction.y * clampedDistance,
+  };
+}
+
+function DoorLayer({
+  doors = [],
+  walls = [],
+  selectedObject,
+  onSelectObject,
+  onUpdateDoorPosition,
+}) {
   return (
     <>
       {doors.map((door) => {
@@ -40,19 +76,11 @@ function DoorLayer({ doors = [], walls = [], selectedObject, onSelectObject }) {
           selectedObject?.type === "door" && selectedObject.id === door.id;
 
         return (
-          <Line
+          <Group
             key={door.id}
-            points={[
-              center.x - normal.x * DOOR_LENGTH,
-              center.y - normal.y * DOOR_LENGTH,
-              center.x + normal.x * DOOR_LENGTH,
-              center.y + normal.y * DOOR_LENGTH,
-            ]}
-            stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
-            strokeWidth={DOOR_WIDTH}
-            hitStrokeWidth={40}
-            lineCap="round"
-            listening
+            x={center.x}
+            y={center.y}
+            draggable={isSelected}
             onMouseDown={(e) => {
               e.cancelBubble = true;
               onSelectObject("door", door.id);
@@ -61,11 +89,38 @@ function DoorLayer({ doors = [], walls = [], selectedObject, onSelectObject }) {
               e.cancelBubble = true;
               onSelectObject("door", door.id);
             }}
-            onTap={(e) => {
+            onDragMove={(e) => {
               e.cancelBubble = true;
-              onSelectObject("door", door.id);
+
+              const projectedPosition = projectPointToWall(
+                {
+                  x: e.target.x(),
+                  y: e.target.y(),
+                },
+                wall,
+              );
+
+              e.target.position(projectedPosition);
+              onUpdateDoorPosition(door.id, projectedPosition);
             }}
-          />
+            onDragEnd={(e) => {
+              e.cancelBubble = true;
+            }}
+          >
+            <Line
+              points={[
+                -normal.x * DOOR_LENGTH,
+                -normal.y * DOOR_LENGTH,
+                normal.x * DOOR_LENGTH,
+                normal.y * DOOR_LENGTH,
+              ]}
+              stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
+              strokeWidth={DOOR_WIDTH}
+              hitStrokeWidth={40}
+              lineCap="round"
+              listening
+            />
+          </Group>
         );
       })}
     </>
