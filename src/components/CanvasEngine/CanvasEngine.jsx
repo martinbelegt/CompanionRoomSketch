@@ -80,6 +80,7 @@ function CanvasEngine({
   selectedWallId,
   onSelectWall,
   onUpdateWallPoint,
+  onSelectTool,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
@@ -175,6 +176,7 @@ function CanvasEngine({
       addWall(wall);
 
       setWallStartPoint(null);
+      onSelectTool("select");
 
       return;
     }

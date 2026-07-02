@@ -41,6 +41,7 @@ function Canvas({
   selectedWallId,
   onSelectWall,
   onUpdateWallPoint,
+  onSelectTool,
 }) {
   return (
     <CanvasEngine
@@ -63,6 +64,7 @@ function Canvas({
       selectedWallId={selectedWallId}
       onSelectWall={onSelectWall}
       onUpdateWallPoint={onUpdateWallPoint}
+      onSelectTool={onSelectTool}
     />
   );
 }

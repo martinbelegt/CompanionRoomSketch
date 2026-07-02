@@ -389,6 +389,7 @@ function AppLayout() {
           selectedWallId={selectedWallId}
           onSelectWall={setSelectedWallId}
           onUpdateWallPoint={updateWallPoint}
+          onSelectTool={setActiveTool}
         />
 
         <Inspector
