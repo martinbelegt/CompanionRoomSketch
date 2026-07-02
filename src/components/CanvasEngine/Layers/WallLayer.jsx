@@ -7,7 +7,7 @@ const WALL_WIDTH = 6;
 function WallLayer({
   walls = [],
   selectedWallId,
-  onSelectWall,
+  onWallClick,
   onUpdateWallPoint,
 }) {
   return (
@@ -29,7 +29,7 @@ function WallLayer({
             lineJoin="round"
             onClick={(e) => {
               e.cancelBubble = true;
-              onSelectWall(wall.id);
+              onWallClick(wall);
             }}
           />
 

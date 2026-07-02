@@ -25,6 +25,7 @@ import {
 import SnapIndicatorLayer from "./Layers/SnapIndicatorLayer";
 
 import DoorLayer from "./Layers/DoorLayer";
+import { createDoor } from "../../doors/doorUtils";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -50,6 +51,13 @@ function getMeasuredDistanceMm(pixelDistance, calibration) {
   }
 
   return pixelDistance * calibration.mmPerPixel;
+}
+
+function getWallCenter(wall) {
+  return {
+    x: (wall.startPoint.x + wall.endPoint.x) / 2,
+    y: (wall.startPoint.y + wall.endPoint.y) / 2,
+  };
 }
 
 function CanvasEngine({
@@ -229,6 +237,15 @@ function CanvasEngine({
   const snapPoint =
     currentTool === "wall" ? findSnapPoint(cursor, walls) : null;
 
+  function handleWallClick(wall) {
+    if (currentTool === "door") {
+      addDoor(createDoor(wall.id, getWallCenter(wall)));
+      return;
+    }
+
+    onSelectWall(wall.id);
+  }
+
   return (
     <div className="canvas-engine" ref={containerRef}>
       <Stage
@@ -261,7 +278,7 @@ function CanvasEngine({
           <WallLayer
             walls={walls}
             selectedWallId={selectedWallId}
-            onSelectWall={onSelectWall}
+            onWallClick={handleWallClick}
             onUpdateWallPoint={onUpdateWallPoint}
           />
           <DoorLayer doors={doors} walls={walls} />
