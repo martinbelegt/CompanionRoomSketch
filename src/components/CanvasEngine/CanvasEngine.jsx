@@ -192,6 +192,7 @@ function CanvasEngine({
     if (currentTool !== "measure") {
       onSelectFurniture(null);
       onSelectWall(null);
+      onClearSelection();
       return;
     }
 
@@ -251,6 +252,7 @@ function CanvasEngine({
     }
 
     onSelectWall(wall.id);
+    onSelectObject("wall", wall.id);
   }
 
   return (
