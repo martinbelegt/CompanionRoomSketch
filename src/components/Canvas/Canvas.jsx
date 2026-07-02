@@ -45,6 +45,7 @@ function Canvas({
   selectedObject,
   onSelectObject,
   onClearSelection,
+  onUpdateDoorPosition,
 }) {
   return (
     <CanvasEngine
@@ -71,6 +72,7 @@ function Canvas({
       selectedObject={selectedObject}
       onSelectObject={onSelectObject}
       onClearSelection={onClearSelection}
+      onUpdateDoorPosition={onUpdateDoorPosition}
     />
   );
 }

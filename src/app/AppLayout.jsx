@@ -47,6 +47,18 @@ function AppLayout() {
   function addDoor(door) {
     setDoors((current) => [...current, door]);
   }
+  function updateDoorPosition(id, position) {
+    setDoors((current) =>
+      current.map((door) =>
+        door.id === id
+          ? {
+              ...door,
+              position,
+            }
+          : door,
+      ),
+    );
+  }
   function selectObject(type, id) {
     setSelectedObject({ type, id });
   }
@@ -396,6 +408,7 @@ function AppLayout() {
           doors={doors}
           addWall={addWall}
           addDoor={addDoor}
+          onUpdateDoorPosition={updateDoorPosition}
           selectedFurnitureId={selectedFurnitureId}
           onSelectFurniture={setSelectedFurnitureId}
           onMoveFurniture={moveFurniture}
