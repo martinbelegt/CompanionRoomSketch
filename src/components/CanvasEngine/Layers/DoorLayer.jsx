@@ -1,9 +1,13 @@
-import { Group, Line } from "react-konva";
+import { Arc, Group, Line } from "react-konva";
 
 const DOOR_COLOR = "#92400e";
 const DOOR_SELECTED_COLOR = "#2563eb";
 const DOOR_WIDTH = 10;
 const DEFAULT_MM_PER_PIXEL = 10;
+
+function toDegrees(radians) {
+  return (radians * 180) / Math.PI;
+}
 
 function getWallCenter(wall) {
   return {
@@ -69,16 +73,60 @@ function DoorLayer({
     <>
       {doors.map((door) => {
         const wall = walls.find((item) => item.id === door.wallId);
-
         if (!wall) return null;
 
         const center = door.position ?? getWallCenter(wall);
         const normal = getWallNormal(wall);
+        const direction = getWallDirection(wall);
 
-        const doorLengthPx = (door.widthMm ?? 900) / mmPerPixel / 2;
+        const doorWidthPx = (door.widthMm ?? 900) / mmPerPixel;
+        const halfDoorWidthPx = doorWidthPx / 2;
 
         const isSelected =
           selectedObject?.type === "door" && selectedObject.id === door.id;
+
+        const hinge =
+          door.swing === "right"
+            ? {
+                x: normal.x * halfDoorWidthPx,
+                y: normal.y * halfDoorWidthPx,
+              }
+            : {
+                x: -normal.x * halfDoorWidthPx,
+                y: -normal.y * halfDoorWidthPx,
+              };
+
+        const closedVector =
+          door.swing === "right"
+            ? {
+                x: -normal.x * doorWidthPx,
+                y: -normal.y * doorWidthPx,
+              }
+            : {
+                x: normal.x * doorWidthPx,
+                y: normal.y * doorWidthPx,
+              };
+
+        const openVector =
+          door.direction === "outside"
+            ? {
+                x: -direction.x * doorWidthPx,
+                y: -direction.y * doorWidthPx,
+              }
+            : {
+                x: direction.x * doorWidthPx,
+                y: direction.y * doorWidthPx,
+              };
+
+        const closedRotation = toDegrees(
+          Math.atan2(closedVector.y, closedVector.x),
+        );
+
+        const openRotation = toDegrees(Math.atan2(openVector.y, openVector.x));
+        let arcAngle = openRotation - closedRotation;
+
+        if (arcAngle > 180) arcAngle -= 360;
+        if (arcAngle < -180) arcAngle += 360;
 
         return (
           <Group
@@ -114,16 +162,28 @@ function DoorLayer({
           >
             <Line
               points={[
-                -normal.x * doorLengthPx,
-                -normal.y * doorLengthPx,
-                normal.x * doorLengthPx,
-                normal.y * doorLengthPx,
+                -normal.x * halfDoorWidthPx,
+                -normal.y * halfDoorWidthPx,
+                normal.x * halfDoorWidthPx,
+                normal.y * halfDoorWidthPx,
               ]}
               stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
               strokeWidth={DOOR_WIDTH}
               hitStrokeWidth={40}
               lineCap="round"
               listening
+            />
+
+            <Arc
+              x={hinge.x}
+              y={hinge.y}
+              innerRadius={doorWidthPx}
+              outerRadius={doorWidthPx}
+              angle={arcAngle}
+              rotation={closedRotation}
+              stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
+              strokeWidth={2}
+              listening={false}
             />
           </Group>
         );
