@@ -1,60 +1,78 @@
 .sidebar {
   background: #f8fafc;
-
   border-right: 1px solid #e5e7eb;
-
-  padding: 20px;
-
+  padding: 16px;
   display: flex;
-
   flex-direction: column;
-
   gap: 12px;
 }
 
+.sidebar-card {
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.sidebar-card-blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.sidebar-card-green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.sidebar-card-pink {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.sidebar-card-gray {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
 .sidebar-button {
+  width: 100%;
   border: none;
-
   background: white;
-
-  padding: 14px;
-
+  padding: 9px 10px;
   border-radius: 10px;
-
   cursor: pointer;
-
   text-align: left;
-
-  font-size: 15px;
-
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-
-  transition: 0.2s;
+  font-size: 13px;
+  line-height: 1.3;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  transition: 0.15s;
 }
 
 .sidebar-button:hover {
-  transform: translateX(4px);
-
-  background: #eef6ff;
+  transform: translateX(2px);
+  background: #f8fafc;
 }
+
 .sidebar-section-title {
-  margin-top: 12px;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
+  font-weight: 800;
+  color: #475569;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  text-align: left;
 }
 
 .sidebar-button.disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
 .sidebar-furniture-row {
   display: flex;
   gap: 6px;
   align-items: center;
+  margin-top: 6px;
 }
 
 .sidebar-furniture-button {
@@ -62,17 +80,57 @@
 }
 
 .sidebar-delete-button {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #fee2e2;
   color: #991b1b;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .sidebar-delete-button:hover {
   background: #fecaca;
+}
+
+.sidebar-small-text {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.sidebar-progress {
+  width: 100%;
+  height: 8px;
+  background: #dbeafe;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 10px 0 8px;
+}
+
+.sidebar-progress-fill {
+  width: 17%;
+  height: 100%;
+  background: #2563eb;
+}
+
+.sidebar-category {
+  margin-top: 6px;
+}
+
+.sidebar-nested-button {
+  margin-left: 10px;
+  width: calc(100% - 10px);
+}
+
+.sidebar-primary-button {
+  margin-top: 12px;
+  background: #2563eb;
+  color: white;
+  border: none;
+}
+
+.sidebar-primary-button:hover {
+  background: #1d4ed8;
 }
