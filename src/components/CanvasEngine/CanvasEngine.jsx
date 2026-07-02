@@ -24,6 +24,8 @@ import {
 
 import SnapIndicatorLayer from "./Layers/SnapIndicatorLayer";
 
+import DoorLayer from "./Layers/DoorLayer";
+
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
   const dy = pointB.y - pointA.y;
@@ -262,6 +264,7 @@ function CanvasEngine({
             onSelectWall={onSelectWall}
             onUpdateWallPoint={onUpdateWallPoint}
           />
+          <DoorLayer doors={doors} walls={walls} />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={
