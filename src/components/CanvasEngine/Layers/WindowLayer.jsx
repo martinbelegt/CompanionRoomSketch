@@ -1,4 +1,4 @@
-import { Line } from "react-konva";
+import { Group, Line } from "react-konva";
 
 const WINDOW_COLOR = "#0ea5e9";
 const WINDOW_SELECTED_COLOR = "#2563eb";
@@ -12,17 +12,46 @@ function getWallCenter(wall) {
   };
 }
 
-function getWallNormal(wall) {
+function getWallDirection(wall) {
   const dx = wall.endPoint.x - wall.startPoint.x;
   const dy = wall.endPoint.y - wall.startPoint.y;
-
   const length = Math.sqrt(dx * dx + dy * dy);
 
-  if (!length) return { x: 0, y: 0 };
+  if (!length) return { x: 1, y: 0 };
 
   return {
-    x: -dy / length,
-    y: dx / length,
+    x: dx / length,
+    y: dy / length,
+  };
+}
+
+function getWallNormal(wall) {
+  const direction = getWallDirection(wall);
+
+  return {
+    x: -direction.y,
+    y: direction.x,
+  };
+}
+
+function projectPointToWall(point, wall) {
+  const direction = getWallDirection(wall);
+
+  const vx = point.x - wall.startPoint.x;
+  const vy = point.y - wall.startPoint.y;
+
+  const wallLength =
+    Math.sqrt(
+      (wall.endPoint.x - wall.startPoint.x) ** 2 +
+        (wall.endPoint.y - wall.startPoint.y) ** 2,
+    ) || 1;
+
+  const distanceAlongWall = vx * direction.x + vy * direction.y;
+  const clampedDistance = Math.max(0, Math.min(wallLength, distanceAlongWall));
+
+  return {
+    x: wall.startPoint.x + direction.x * clampedDistance,
+    y: wall.startPoint.y + direction.y * clampedDistance,
   };
 }
 
@@ -32,6 +61,7 @@ function WindowLayer({
   calibration,
   selectedObject,
   onSelectObject,
+  onUpdateWindowPosition,
 }) {
   const mmPerPixel = calibration?.mmPerPixel ?? DEFAULT_MM_PER_PIXEL;
 
@@ -52,19 +82,11 @@ function WindowLayer({
           selectedObject.id === windowItem.id;
 
         return (
-          <Line
+          <Group
             key={windowItem.id}
-            points={[
-              center.x - normal.x * halfWidth,
-              center.y - normal.y * halfWidth,
-              center.x + normal.x * halfWidth,
-              center.y + normal.y * halfWidth,
-            ]}
-            stroke={isSelected ? WINDOW_SELECTED_COLOR : WINDOW_COLOR}
-            strokeWidth={WINDOW_WIDTH}
-            hitStrokeWidth={32}
-            lineCap="round"
-            listening
+            x={center.x}
+            y={center.y}
+            draggable={isSelected}
             onMouseDown={(e) => {
               e.cancelBubble = true;
               onSelectObject("window", windowItem.id);
@@ -73,7 +95,38 @@ function WindowLayer({
               e.cancelBubble = true;
               onSelectObject("window", windowItem.id);
             }}
-          />
+            onDragMove={(e) => {
+              e.cancelBubble = true;
+
+              const projectedPosition = projectPointToWall(
+                {
+                  x: e.target.x(),
+                  y: e.target.y(),
+                },
+                wall,
+              );
+
+              e.target.position(projectedPosition);
+              onUpdateWindowPosition(windowItem.id, projectedPosition);
+            }}
+            onDragEnd={(e) => {
+              e.cancelBubble = true;
+            }}
+          >
+            <Line
+              points={[
+                -normal.x * halfWidth,
+                -normal.y * halfWidth,
+                normal.x * halfWidth,
+                normal.y * halfWidth,
+              ]}
+              stroke={isSelected ? WINDOW_SELECTED_COLOR : WINDOW_COLOR}
+              strokeWidth={WINDOW_WIDTH}
+              hitStrokeWidth={32}
+              lineCap="round"
+              listening
+            />
+          </Group>
         );
       })}
     </>

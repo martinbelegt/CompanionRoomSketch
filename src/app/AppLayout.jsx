@@ -309,6 +309,16 @@ function AppLayout() {
     setSelectedObject(null);
   }
 
+  function deleteSelectedWindow() {
+    if (selectedObject?.type !== "window") return;
+
+    setWindows((current) =>
+      current.filter((windowItem) => windowItem.id !== selectedObject.id),
+    );
+
+    setSelectedObject(null);
+  }
+
   function updateWallPoint(id, pointName, position) {
     setWalls((current) =>
       current.map((wall) =>
@@ -353,6 +363,11 @@ function AppLayout() {
         setActiveTool("select");
         setTemporaryTool(null);
 
+        return;
+      }
+
+      if (selectedObject?.type === "window") {
+        deleteSelectedWindow();
         return;
       }
 
