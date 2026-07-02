@@ -38,7 +38,69 @@ function Sidebar({
         ➕ Nieuw meubel
       </button>
 
-      <div className="sidebar-section-title">Hulp</div>
+      <div
+        style={{
+          background: "#eff6ff",
+          border: "1px solid #bfdbfe",
+          borderRadius: "12px",
+          padding: "14px",
+          marginBottom: "18px",
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 700,
+            color: "#1d4ed8",
+            marginBottom: "8px",
+          }}
+        >
+          👋 Welkom bij Companion
+        </div>
+
+        <div
+          style={{
+            width: "100%",
+            height: "8px",
+            background: "#dbeafe",
+            borderRadius: "999px",
+            overflow: "hidden",
+            marginBottom: "12px",
+          }}
+        >
+          <div
+            style={{
+              width: "17%",
+              height: "100%",
+              background: "#2563eb",
+            }}
+          />
+        </div>
+
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#1d4ed8",
+            fontWeight: 600,
+            marginBottom: "10px",
+          }}
+        >
+          17% voltooid
+        </div>
+
+        <div
+          style={{
+            fontSize: "13px",
+            color: "#334155",
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>Stap 1 van 6</strong>
+          <br />
+          We gaan samen je woning op schaal tekenen.
+        </div>
+      </div>
+
+      <div className="sidebar-section-title">Stap 1 • Woning tekenen</div>
 
       <button
         className="sidebar-button"
@@ -48,7 +110,11 @@ function Sidebar({
         }}
         onClick={() => onSelectTool(activeTool === "pan" ? "select" : "pan")}
       >
-        ✋ Plattegrond schuiven
+        <>
+          ✋ Plattegrond schuiven
+          <br />
+          <small>(Spatiebalk ingedrukt houden)</small>
+        </>
       </button>
 
       <button
@@ -61,7 +127,11 @@ function Sidebar({
           onSelectTool(activeTool === "measure" ? "select" : "measure")
         }
       >
-        📏 Afstand meten
+        <>
+          📏 Afstand meten
+          <br />
+          <small>(Klik twee punten)</small>
+        </>
       </button>
 
       <button
@@ -72,7 +142,11 @@ function Sidebar({
         }}
         onClick={() => onSelectTool(activeTool === "wall" ? "select" : "wall")}
       >
-        🧱 Muren tekenen
+        <>
+          🧱 Muren tekenen
+          <br />
+          <small>(Klik • Klik • Shift = recht)</small>
+        </>
       </button>
 
       <button className="sidebar-button" onClick={onClearWalls}>
