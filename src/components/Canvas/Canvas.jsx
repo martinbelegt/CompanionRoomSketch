@@ -1,22 +1,3 @@
-/**
- * ============================================================================
- * Companion RoomSketch
- * ============================================================================
- *
- * Bestand:
- * components/Canvas/Canvas.jsx
- *
- * Verantwoordelijkheid:
- * Verbindt AppLayout met CanvasEngine.
- *
- * Toekomst:
- * - Walls
- * - Rooms
- * - Dimensions
- * - Selectie
- * ============================================================================
- */
-
 import "./Canvas.css";
 
 import CanvasEngine from "../CanvasEngine/CanvasEngine";
@@ -25,8 +6,10 @@ function Canvas({
   furniture,
   walls,
   doors,
+  windows,
   addWall,
   addDoor,
+  addWindow,
   selectedFurnitureId,
   onSelectFurniture,
   onMoveFurniture,
@@ -52,8 +35,10 @@ function Canvas({
       furniture={furniture}
       walls={walls}
       doors={doors}
+      windows={windows}
       addWall={addWall}
       addDoor={addDoor}
+      addWindow={addWindow}
       selectedFurnitureId={selectedFurnitureId}
       onSelectFurniture={onSelectFurniture}
       onMoveFurniture={onMoveFurniture}

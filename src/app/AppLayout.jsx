@@ -17,6 +17,7 @@ const STORAGE_KEYS = {
   myFurniture: "companion-roomsketch-my-furniture",
   walls: "companion-roomsketch-walls",
   doors: "companion-roomsketch-doors",
+  windows: "companion-roomsketch-windows",
 };
 
 function loadFromStorage(key, fallback) {
@@ -37,6 +38,10 @@ function AppLayout() {
     loadFromStorage(STORAGE_KEYS.doors, []),
   );
 
+  const [windows, setWindows] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.windows, []),
+  );
+
   const [selectedWallId, setSelectedWallId] = useState(null);
 
   const [selectedObject, setSelectedObject] = useState(null);
@@ -46,6 +51,9 @@ function AppLayout() {
   }
   function addDoor(door) {
     setDoors((current) => [...current, door]);
+  }
+  function addWindow(windowItem) {
+    setWindows((current) => [...current, windowItem]);
   }
   function updateDoorPosition(id, position) {
     setDoors((current) =>
@@ -98,6 +106,10 @@ function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.doors, JSON.stringify(doors));
   }, [doors]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.windows, JSON.stringify(windows));
+  }, [windows]);
 
   function addFurniture(catalogId) {
     const template =
@@ -427,6 +439,8 @@ function AppLayout() {
           selectedObject={selectedObject}
           onSelectObject={selectObject}
           onClearSelection={() => setSelectedObject(null)}
+          windows={windows}
+          addWindow={addWindow}
         />
 
         <Inspector
