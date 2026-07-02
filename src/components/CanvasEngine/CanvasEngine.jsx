@@ -290,7 +290,12 @@ function CanvasEngine({
             onWallClick={handleWallClick}
             onUpdateWallPoint={onUpdateWallPoint}
           />
-          <DoorLayer doors={doors} walls={walls} />
+          <DoorLayer
+            doors={doors}
+            walls={walls}
+            selectedObject={selectedObject}
+            onSelectObject={onSelectObject}
+          />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={

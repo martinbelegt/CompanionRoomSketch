@@ -1,6 +1,7 @@
 import { Line } from "react-konva";
 
 const DOOR_COLOR = "#92400e";
+const DOOR_SELECTED_COLOR = "#2563eb";
 const DOOR_WIDTH = 10;
 const DOOR_LENGTH = 18;
 
@@ -14,7 +15,6 @@ function getWallCenter(wall) {
 function getWallNormal(wall) {
   const dx = wall.endPoint.x - wall.startPoint.x;
   const dy = wall.endPoint.y - wall.startPoint.y;
-
   const length = Math.sqrt(dx * dx + dy * dy);
 
   if (!length) return { x: 0, y: 0 };
@@ -25,7 +25,7 @@ function getWallNormal(wall) {
   };
 }
 
-function DoorLayer({ doors = [], walls = [] }) {
+function DoorLayer({ doors = [], walls = [], selectedObject, onSelectObject }) {
   return (
     <>
       {doors.map((door) => {
@@ -36,6 +36,9 @@ function DoorLayer({ doors = [], walls = [] }) {
         const center = door.position ?? getWallCenter(wall);
         const normal = getWallNormal(wall);
 
+        const isSelected =
+          selectedObject?.type === "door" && selectedObject.id === door.id;
+
         return (
           <Line
             key={door.id}
@@ -45,10 +48,23 @@ function DoorLayer({ doors = [], walls = [] }) {
               center.x + normal.x * DOOR_LENGTH,
               center.y + normal.y * DOOR_LENGTH,
             ]}
-            stroke={DOOR_COLOR}
+            stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
             strokeWidth={DOOR_WIDTH}
+            hitStrokeWidth={40}
             lineCap="round"
-            listening={false}
+            listening
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+              onSelectObject("door", door.id);
+            }}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              onSelectObject("door", door.id);
+            }}
+            onTap={(e) => {
+              e.cancelBubble = true;
+              onSelectObject("door", door.id);
+            }}
           />
         );
       })}

@@ -68,6 +68,9 @@ function Canvas({
       onSelectWall={onSelectWall}
       onUpdateWallPoint={onUpdateWallPoint}
       onSelectTool={onSelectTool}
+      selectedObject={selectedObject}
+      onSelectObject={onSelectObject}
+      onClearSelection={onClearSelection}
     />
   );
 }
