@@ -242,6 +242,8 @@ function CanvasEngine({
   function handleWallClick(wall) {
     if (currentTool === "door") {
       addDoor(createDoor(wall.id, getWallCenter(wall)));
+
+      onSelectTool("select");
       return;
     }
 

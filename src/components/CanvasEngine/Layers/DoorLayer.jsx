@@ -2,7 +2,7 @@ import { Line } from "react-konva";
 
 const DOOR_COLOR = "#92400e";
 const DOOR_WIDTH = 10;
-const DOOR_LENGTH_PX = 34;
+const DOOR_LENGTH = 18;
 
 function getWallCenter(wall) {
   return {
@@ -14,6 +14,7 @@ function getWallCenter(wall) {
 function getWallNormal(wall) {
   const dx = wall.endPoint.x - wall.startPoint.x;
   const dy = wall.endPoint.y - wall.startPoint.y;
+
   const length = Math.sqrt(dx * dx + dy * dy);
 
   if (!length) return { x: 0, y: 0 };
@@ -25,8 +26,6 @@ function getWallNormal(wall) {
 }
 
 function DoorLayer({ doors = [], walls = [] }) {
-  if (doors.length === 0) return null;
-
   return (
     <>
       {doors.map((door) => {
@@ -41,10 +40,10 @@ function DoorLayer({ doors = [], walls = [] }) {
           <Line
             key={door.id}
             points={[
-              center.x - normal.x * DOOR_LENGTH_PX,
-              center.y - normal.y * DOOR_LENGTH_PX,
-              center.x + normal.x * DOOR_LENGTH_PX,
-              center.y + normal.y * DOOR_LENGTH_PX,
+              center.x - normal.x * DOOR_LENGTH,
+              center.y - normal.y * DOOR_LENGTH,
+              center.x + normal.x * DOOR_LENGTH,
+              center.y + normal.y * DOOR_LENGTH,
             ]}
             stroke={DOOR_COLOR}
             strokeWidth={DOOR_WIDTH}
