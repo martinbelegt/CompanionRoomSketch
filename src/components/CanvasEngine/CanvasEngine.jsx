@@ -27,6 +27,9 @@ import SnapIndicatorLayer from "./Layers/SnapIndicatorLayer";
 import DoorLayer from "./Layers/DoorLayer";
 import { createDoor } from "../../doors/doorUtils";
 
+import WindowLayer from "./Layers/WindowLayer";
+import { createWindow } from "../../windows/windowUtils";
+
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
   const dy = pointB.y - pointA.y;
@@ -253,6 +256,12 @@ function CanvasEngine({
       onSelectTool("select");
       return;
     }
+    if (currentTool === "window") {
+      addWindow(createWindow(wall.id, getWallCenter(wall)));
+
+      onSelectTool("select");
+      return;
+    }
 
     onSelectWall(wall.id);
     onSelectObject("wall", wall.id);
@@ -300,6 +309,11 @@ function CanvasEngine({
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
             onUpdateDoorPosition={onUpdateDoorPosition}
+          />
+          <WindowLayer
+            windows={windows}
+            walls={walls}
+            calibration={calibration}
           />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
