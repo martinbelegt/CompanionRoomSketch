@@ -91,6 +91,17 @@ function Sidebar({
     }));
   }
 
+  function getToolButtonStyle(toolName) {
+    return {
+      background: activeTool === toolName ? "#2563eb" : "white",
+      color: activeTool === toolName ? "white" : "#1e293b",
+    };
+  }
+
+  function toggleTool(toolName) {
+    onSelectTool(activeTool === toolName ? "select" : toolName);
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-card sidebar-card-blue">
@@ -118,11 +129,8 @@ function Sidebar({
 
         <button
           className="sidebar-button"
-          style={{
-            background: activeTool === "pan" ? "#2563eb" : "white",
-            color: activeTool === "pan" ? "white" : "#1e293b",
-          }}
-          onClick={() => onSelectTool(activeTool === "pan" ? "select" : "pan")}
+          style={getToolButtonStyle("pan")}
+          onClick={() => toggleTool("pan")}
         >
           ✋ Plattegrond schuiven
           <br />
@@ -131,13 +139,8 @@ function Sidebar({
 
         <button
           className="sidebar-button"
-          style={{
-            background: activeTool === "measure" ? "#2563eb" : "white",
-            color: activeTool === "measure" ? "white" : "#1e293b",
-          }}
-          onClick={() =>
-            onSelectTool(activeTool === "measure" ? "select" : "measure")
-          }
+          style={getToolButtonStyle("measure")}
+          onClick={() => toggleTool("measure")}
         >
           📏 Afstand meten
           <br />
@@ -146,17 +149,22 @@ function Sidebar({
 
         <button
           className="sidebar-button"
-          style={{
-            background: activeTool === "wall" ? "#2563eb" : "white",
-            color: activeTool === "wall" ? "white" : "#1e293b",
-          }}
-          onClick={() =>
-            onSelectTool(activeTool === "wall" ? "select" : "wall")
-          }
+          style={getToolButtonStyle("wall")}
+          onClick={() => toggleTool("wall")}
         >
           🧱 Muren tekenen
           <br />
           <small>(Klik • Klik • Shift = recht)</small>
+        </button>
+
+        <button
+          className="sidebar-button"
+          style={getToolButtonStyle("door")}
+          onClick={() => toggleTool("door")}
+        >
+          🚪 Deuren plaatsen
+          <br />
+          <small>(Klik op een muur)</small>
         </button>
 
         <button className="sidebar-button" onClick={onClearWalls}>
