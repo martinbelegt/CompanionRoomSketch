@@ -1,0 +1,1 @@
+export const DEFAULT_WINDOW_WIDTH_MM = 1000;
