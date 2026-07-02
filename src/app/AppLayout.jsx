@@ -55,6 +55,20 @@ function AppLayout() {
   function addWindow(windowItem) {
     setWindows((current) => [...current, windowItem]);
   }
+
+  function updateWindowPosition(id, position) {
+    setWindows((current) =>
+      current.map((windowItem) =>
+        windowItem.id === id
+          ? {
+              ...windowItem,
+              position,
+            }
+          : windowItem,
+      ),
+    );
+  }
+
   function updateDoorPosition(id, position) {
     setDoors((current) =>
       current.map((door) =>
@@ -441,6 +455,7 @@ function AppLayout() {
           onClearSelection={() => setSelectedObject(null)}
           windows={windows}
           addWindow={addWindow}
+          onUpdateWindowPosition={updateWindowPosition}
         />
 
         <Inspector
