@@ -167,6 +167,16 @@ function Sidebar({
           <small>(Klik op een muur)</small>
         </button>
 
+        <button
+          className="sidebar-button"
+          style={getToolButtonStyle("window")}
+          onClick={() => toggleTool("window")}
+        >
+          🪟 Ramen plaatsen
+          <br />
+          <small>(Klik op een muur)</small>
+        </button>
+
         <button className="sidebar-button" onClick={onClearWalls}>
           🗑 Wis alle muren
         </button>
