@@ -314,6 +314,8 @@ function CanvasEngine({
             windows={windows}
             walls={walls}
             calibration={calibration}
+            selectedObject={selectedObject}
+            onSelectObject={onSelectObject}
           />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}

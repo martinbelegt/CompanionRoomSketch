@@ -1,6 +1,7 @@
 import { Line } from "react-konva";
 
 const WINDOW_COLOR = "#0ea5e9";
+const WINDOW_SELECTED_COLOR = "#2563eb";
 const WINDOW_WIDTH = 6;
 const DEFAULT_MM_PER_PIXEL = 10;
 
@@ -25,7 +26,13 @@ function getWallNormal(wall) {
   };
 }
 
-function WindowLayer({ windows = [], walls = [], calibration }) {
+function WindowLayer({
+  windows = [],
+  walls = [],
+  calibration,
+  selectedObject,
+  onSelectObject,
+}) {
   const mmPerPixel = calibration?.mmPerPixel ?? DEFAULT_MM_PER_PIXEL;
 
   return (
@@ -36,10 +43,13 @@ function WindowLayer({ windows = [], walls = [], calibration }) {
         if (!wall) return null;
 
         const center = windowItem.position ?? getWallCenter(wall);
-
         const normal = getWallNormal(wall);
 
         const halfWidth = (windowItem.widthMm ?? 1000) / mmPerPixel / 2;
+
+        const isSelected =
+          selectedObject?.type === "window" &&
+          selectedObject.id === windowItem.id;
 
         return (
           <Line
@@ -50,10 +60,19 @@ function WindowLayer({ windows = [], walls = [], calibration }) {
               center.x + normal.x * halfWidth,
               center.y + normal.y * halfWidth,
             ]}
-            stroke={WINDOW_COLOR}
+            stroke={isSelected ? WINDOW_SELECTED_COLOR : WINDOW_COLOR}
             strokeWidth={WINDOW_WIDTH}
+            hitStrokeWidth={32}
             lineCap="round"
-            listening={false}
+            listening
+            onMouseDown={(e) => {
+              e.cancelBubble = true;
+              onSelectObject("window", windowItem.id);
+            }}
+            onClick={(e) => {
+              e.cancelBubble = true;
+              onSelectObject("window", windowItem.id);
+            }}
           />
         );
       })}
