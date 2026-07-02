@@ -76,7 +76,7 @@ function Sidebar({
   onSelectTool,
   onClearWalls,
 }) {
-  const [furnitureOpen, setFurnitureOpen] = useState(true);
+  const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
   const [openGroups, setOpenGroups] = useState({
     living: true,
