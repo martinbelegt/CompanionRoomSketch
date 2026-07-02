@@ -294,6 +294,7 @@ function CanvasEngine({
           <DoorLayer
             doors={doors}
             walls={walls}
+            calibration={calibration}
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
             onUpdateDoorPosition={onUpdateDoorPosition}

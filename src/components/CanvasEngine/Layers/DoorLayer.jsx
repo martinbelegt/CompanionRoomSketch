@@ -3,7 +3,7 @@ import { Group, Line } from "react-konva";
 const DOOR_COLOR = "#92400e";
 const DOOR_SELECTED_COLOR = "#2563eb";
 const DOOR_WIDTH = 10;
-const DOOR_LENGTH = 18;
+const DEFAULT_MM_PER_PIXEL = 10;
 
 function getWallCenter(wall) {
   return {
@@ -58,10 +58,13 @@ function projectPointToWall(point, wall) {
 function DoorLayer({
   doors = [],
   walls = [],
+  calibration,
   selectedObject,
   onSelectObject,
   onUpdateDoorPosition,
 }) {
+  const mmPerPixel = calibration?.mmPerPixel ?? DEFAULT_MM_PER_PIXEL;
+
   return (
     <>
       {doors.map((door) => {
@@ -71,6 +74,8 @@ function DoorLayer({
 
         const center = door.position ?? getWallCenter(wall);
         const normal = getWallNormal(wall);
+
+        const doorLengthPx = (door.widthMm ?? 900) / mmPerPixel / 2;
 
         const isSelected =
           selectedObject?.type === "door" && selectedObject.id === door.id;
@@ -109,10 +114,10 @@ function DoorLayer({
           >
             <Line
               points={[
-                -normal.x * DOOR_LENGTH,
-                -normal.y * DOOR_LENGTH,
-                normal.x * DOOR_LENGTH,
-                normal.y * DOOR_LENGTH,
+                -normal.x * doorLengthPx,
+                -normal.y * doorLengthPx,
+                normal.x * doorLengthPx,
+                normal.y * doorLengthPx,
               ]}
               stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
               strokeWidth={DOOR_WIDTH}
