@@ -42,6 +42,9 @@ function Canvas({
   onSelectWall,
   onUpdateWallPoint,
   onSelectTool,
+  selectedObject,
+  onSelectObject,
+  onClearSelection,
 }) {
   return (
     <CanvasEngine

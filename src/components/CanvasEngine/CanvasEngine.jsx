@@ -81,6 +81,9 @@ function CanvasEngine({
   onSelectWall,
   onUpdateWallPoint,
   onSelectTool,
+  selectedObject,
+  onSelectObject,
+  onClearSelection,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();

@@ -39,11 +39,16 @@ function AppLayout() {
 
   const [selectedWallId, setSelectedWallId] = useState(null);
 
+  const [selectedObject, setSelectedObject] = useState(null);
+
   function addWall(wall) {
     setWalls((current) => [...current, wall]);
   }
   function addDoor(door) {
     setDoors((current) => [...current, door]);
+  }
+  function selectObject(type, id) {
+    setSelectedObject({ type, id });
   }
   function clearWalls() {
     setWalls([]);
@@ -246,6 +251,7 @@ function AppLayout() {
     );
 
     setSelectedFurnitureId(null);
+    setSelectedObject(null);
   }
   function deleteSelectedWall() {
     if (!selectedWallId) return;
@@ -390,6 +396,9 @@ function AppLayout() {
           onSelectWall={setSelectedWallId}
           onUpdateWallPoint={updateWallPoint}
           onSelectTool={setActiveTool}
+          selectedObject={selectedObject}
+          onSelectObject={selectObject}
+          onClearSelection={() => setSelectedObject(null)}
         />
 
         <Inspector
