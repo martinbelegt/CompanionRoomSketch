@@ -64,6 +64,19 @@ function getWallCenter(wall) {
   };
 }
 
+function createPointAtDistance(startPoint, directionPoint, distancePx) {
+  const dx = directionPoint.x - startPoint.x;
+  const dy = directionPoint.y - startPoint.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
+  if (!length) return directionPoint;
+
+  return {
+    x: startPoint.x + (dx / length) * distancePx,
+    y: startPoint.y + (dy / length) * distancePx,
+  };
+}
+
 function CanvasEngine({
   furniture,
   walls,
@@ -190,7 +203,29 @@ function CanvasEngine({
         e.evt.shiftKey,
       );
 
-      const wall = createWall(wallStartPoint, endPoint);
+      let finalEndPoint = endPoint;
+
+      if (calibration?.mmPerPixel) {
+        const requestedLength = window.prompt(
+          "Lengte van deze muur in millimeters:",
+        );
+
+        const requestedLengthMm = Number(requestedLength);
+
+        if (Number.isFinite(requestedLengthMm) && requestedLengthMm > 0) {
+          const requestedLengthPx = requestedLengthMm / calibration.mmPerPixel;
+
+          finalEndPoint = createPointAtDistance(
+            wallStartPoint,
+            endPoint,
+            requestedLengthPx,
+          );
+        }
+      }
+
+      const wall = createWall(wallStartPoint, finalEndPoint);
+
+      addWall(wall);
 
       addWall(wall);
 

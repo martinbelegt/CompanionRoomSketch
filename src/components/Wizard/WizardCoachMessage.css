@@ -1,0 +1,25 @@
+.wizard-coach-message {
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.wizard-coach-title {
+  background: #2563eb;
+  color: white;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wizard-coach-body {
+  padding: 10px;
+}
+
+.wizard-coach-text {
+  margin-top: 6px;
+  color: #475569;
+  line-height: 1.45;
+}
