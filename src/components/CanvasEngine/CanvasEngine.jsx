@@ -28,6 +28,7 @@ import DoorLayer from "./Layers/DoorLayer";
 import { createDoor } from "../../doors/doorUtils";
 
 import WindowLayer from "./Layers/WindowLayer";
+import WallDimensionLayer from "./Layers/WallDimensionLayer";
 import { createWindow } from "../../windows/windowUtils";
 
 function getDistance(pointA, pointB) {
@@ -326,6 +327,7 @@ function CanvasEngine({
             onSelectObject={onSelectObject}
             onUpdateWindowPosition={onUpdateWindowPosition}
           />
+          <WallDimensionLayer walls={walls} calibration={calibration} />
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={

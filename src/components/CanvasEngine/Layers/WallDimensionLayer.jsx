@@ -1,3 +1,5 @@
+import { Group } from "react-konva";
+
 import { DimensionLine } from "../../../measurement";
 
 function getDistanceMm(startPoint, endPoint, calibration) {
@@ -11,7 +13,7 @@ function getDistanceMm(startPoint, endPoint, calibration) {
 
 function WallDimensionLayer({ walls = [], calibration }) {
   return (
-    <>
+    <Group listening={false}>
       {walls.map((wall) => (
         <DimensionLine
           key={wall.id}
@@ -24,7 +26,7 @@ function WallDimensionLayer({ walls = [], calibration }) {
           )}
         />
       ))}
-    </>
+    </Group>
   );
 }
 
