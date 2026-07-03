@@ -179,7 +179,7 @@ function Sidebar({
         </button>
 
         <button className="sidebar-button" onClick={onResetCanvasView}>
-          🎯 Canvas centreren
+          🎯 Terug naar beginstand
         </button>
 
         <button className="sidebar-button" onClick={onClearWalls}>

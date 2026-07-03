@@ -1,32 +1,22 @@
 import { Image } from "react-konva";
 import useImage from "use-image";
 
-function FloorplanLayer({ canvasWidth, canvasHeight, margin = 30 }) {
+const FLOORPLAN_X = 30;
+const FLOORPLAN_Y = 30;
+const FLOORPLAN_SCALE = 1;
+
+function FloorplanLayer() {
   const [image] = useImage("/projects/hank/floorplan.png");
 
   if (!image) return null;
 
-  const availableWidth = canvasWidth - margin * 2;
-  const availableHeight = canvasHeight - margin * 2;
-
-  const scale = Math.min(
-    availableWidth / image.width,
-    availableHeight / image.height,
-  );
-
-  const width = image.width * scale;
-  const height = image.height * scale;
-
-  const x = (canvasWidth - width) / 2;
-  const y = (canvasHeight - height) / 2;
-
   return (
     <Image
       image={image}
-      x={x}
-      y={y}
-      width={width}
-      height={height}
+      x={FLOORPLAN_X}
+      y={FLOORPLAN_Y}
+      width={image.width * FLOORPLAN_SCALE}
+      height={image.height * FLOORPLAN_SCALE}
       listening={false}
     />
   );

@@ -302,7 +302,7 @@ function CanvasEngine({
         onMouseDown={handleStageMouseDown}
       >
         <Layer>
-          <FloorplanLayer canvasWidth={width} canvasHeight={height} />
+          <FloorplanLayer />
 
           <WallLayer
             walls={walls}
