@@ -93,6 +93,7 @@ function CanvasEngine({
   onClearSelection,
   onUpdateWindowPosition,
   resetCanvasRequest,
+  showWallDimensions,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -327,7 +328,10 @@ function CanvasEngine({
             onSelectObject={onSelectObject}
             onUpdateWindowPosition={onUpdateWindowPosition}
           />
-          <WallDimensionLayer walls={walls} calibration={calibration} />
+          {showWallDimensions && (
+            <WallDimensionLayer walls={walls} calibration={calibration} />
+          )}
+
           <WallPreviewLayer
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={

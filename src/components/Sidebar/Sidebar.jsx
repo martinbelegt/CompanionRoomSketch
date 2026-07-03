@@ -76,6 +76,8 @@ function Sidebar({
   onSelectTool,
   onClearWalls,
   onResetCanvasView,
+  showWallDimensions,
+  onToggleWallDimensions,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
@@ -180,6 +182,10 @@ function Sidebar({
 
         <button className="sidebar-button" onClick={onResetCanvasView}>
           🎯 Terug naar beginstand
+        </button>
+
+        <button className="sidebar-button" onClick={onToggleWallDimensions}>
+          {showWallDimensions ? "📐 Maten verbergen" : "📐 Maten tonen"}
         </button>
 
         <button className="sidebar-button" onClick={onClearWalls}>

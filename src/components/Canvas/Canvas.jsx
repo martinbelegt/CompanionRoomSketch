@@ -31,6 +31,7 @@ function Canvas({
   onUpdateDoorPosition,
   onUpdateWindowPosition,
   resetCanvasRequest,
+  showWallDimensions,
 }) {
   return (
     <CanvasEngine
@@ -62,6 +63,7 @@ function Canvas({
       onUpdateDoorPosition={onUpdateDoorPosition}
       onUpdateWindowPosition={onUpdateWindowPosition}
       resetCanvasRequest={resetCanvasRequest}
+      showWallDimensions={showWallDimensions}
     />
   );
 }
