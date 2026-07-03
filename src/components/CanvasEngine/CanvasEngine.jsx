@@ -91,9 +91,11 @@ function CanvasEngine({
   onSelectObject,
   onClearSelection,
   onUpdateWindowPosition,
+  resetCanvasRequest,
 }) {
   const { containerRef, width, height } = useCanvasSize();
-  const { camera, zoomAtPointer, updatePosition } = useCanvasCamera();
+  const { camera, zoomAtPointer, updatePosition, resetCamera } =
+    useCanvasCamera();
   const currentTool = temporaryTool ?? activeTool;
   const [shiftPressed, setShiftPressed] = useState(false);
 
@@ -104,6 +106,11 @@ function CanvasEngine({
       setWallStartPoint(null);
     }
   }, [currentTool]);
+
+  useEffect(() => {
+    if (!resetCanvasRequest) return;
+    resetCamera();
+  }, [resetCanvasRequest, resetCamera]);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -128,13 +135,13 @@ function CanvasEngine({
   }, []);
 
   function getWorldPointer(stage) {
-    const pointer = stage.getPointerPosition();
+    const pointer = stage.getRelativePointerPosition();
 
     if (!pointer) return null;
 
     return {
-      x: (pointer.x - camera.x) / camera.scale,
-      y: (pointer.y - camera.y) / camera.scale,
+      x: pointer.x,
+      y: pointer.y,
     };
   }
 

@@ -30,6 +30,7 @@ function Canvas({
   onClearSelection,
   onUpdateDoorPosition,
   onUpdateWindowPosition,
+  resetCanvasRequest,
 }) {
   return (
     <CanvasEngine
@@ -60,6 +61,7 @@ function Canvas({
       onClearSelection={onClearSelection}
       onUpdateDoorPosition={onUpdateDoorPosition}
       onUpdateWindowPosition={onUpdateWindowPosition}
+      resetCanvasRequest={resetCanvasRequest}
     />
   );
 }

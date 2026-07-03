@@ -46,6 +46,8 @@ function AppLayout() {
 
   const [selectedObject, setSelectedObject] = useState(null);
 
+  const [resetCanvasRequest, setResetCanvasRequest] = useState(0);
+
   function addWall(wall) {
     setWalls((current) => [...current, wall]);
   }
@@ -86,6 +88,10 @@ function AppLayout() {
   }
   function clearWalls() {
     setWalls([]);
+  }
+
+  function resetCanvasView() {
+    setResetCanvasRequest((current) => current + 1);
   }
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
@@ -441,6 +447,7 @@ function AppLayout() {
           activeTool={activeTool}
           onSelectTool={setActiveTool}
           onClearWalls={clearWalls}
+          onResetCanvasView={resetCanvasView}
         />
 
         <Canvas
@@ -471,6 +478,7 @@ function AppLayout() {
           windows={windows}
           addWindow={addWindow}
           onUpdateWindowPosition={updateWindowPosition}
+          resetCanvasRequest={resetCanvasRequest}
         />
 
         <Inspector

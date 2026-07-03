@@ -75,6 +75,7 @@ function Sidebar({
   activeTool,
   onSelectTool,
   onClearWalls,
+  onResetCanvasView,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
@@ -175,6 +176,10 @@ function Sidebar({
           🪟 Ramen plaatsen
           <br />
           <small>(Klik op een muur)</small>
+        </button>
+
+        <button className="sidebar-button" onClick={onResetCanvasView}>
+          🎯 Canvas centreren
         </button>
 
         <button className="sidebar-button" onClick={onClearWalls}>
