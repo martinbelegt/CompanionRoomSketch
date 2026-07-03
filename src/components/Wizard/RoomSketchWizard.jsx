@@ -1,15 +1,61 @@
+import { useState } from "react";
+
+import "./RoomSketchWizard.css";
+
 function RoomSketchWizard() {
+  const [selectedMode, setSelectedMode] = useState("");
+
   return (
     <div className="roomsketch-wizard">
-      <h2>Welkom bij RoomSketch</h2>
+      <div className="roomsketch-wizard-header">🧙 RoomSketch Wizard</div>
 
-      <p>Hoe wil je beginnen?</p>
+      <div className="roomsketch-wizard-body">
+        <div className="roomsketch-wizard-step">Stap 1 van 5</div>
 
-      <button>📐 Ik heb een plattegrond met maten</button>
+        <p>Hoe wil je beginnen?</p>
 
-      <button>📷 Ik heb een plattegrond zonder maten</button>
+        <label className="roomsketch-wizard-option">
+          <input
+            type="radio"
+            name="wizardMode"
+            value="known"
+            checked={selectedMode === "known"}
+            onChange={(e) => setSelectedMode(e.target.value)}
+          />{" "}
+          Ik heb een plattegrond met maten
+        </label>
 
-      <button>📏 Ik ga mijn woning opmeten</button>
+        <label className="roomsketch-wizard-option">
+          <input
+            type="radio"
+            name="wizardMode"
+            value="unknown"
+            checked={selectedMode === "unknown"}
+            onChange={(e) => setSelectedMode(e.target.value)}
+          />{" "}
+          Ik heb een plattegrond zonder maten
+        </label>
+
+        <label className="roomsketch-wizard-option">
+          <input
+            type="radio"
+            name="wizardMode"
+            value="measure"
+            checked={selectedMode === "measure"}
+            onChange={(e) => setSelectedMode(e.target.value)}
+          />{" "}
+          Ik ga mijn woning opmeten
+        </label>
+
+        <button
+          disabled={!selectedMode}
+          className={`roomsketch-wizard-button ${
+            selectedMode ? "is-active" : "is-disabled"
+          }`}
+        >
+          Volgende →
+        </button>
+      </div>
     </div>
   );
 }

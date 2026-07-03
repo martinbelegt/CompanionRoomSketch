@@ -1,0 +1,53 @@
+.roomsketch-wizard {
+  background: white;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.roomsketch-wizard-header {
+  background: #1d4ed8;
+  color: white;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.roomsketch-wizard-body {
+  padding: 10px;
+  font-size: 13px;
+}
+
+.roomsketch-wizard-step {
+  color: #1d4ed8;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.roomsketch-wizard-option {
+  display: block;
+  margin-bottom: 6px;
+  line-height: 1.25;
+}
+
+.roomsketch-wizard-button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 700;
+}
+
+.roomsketch-wizard-button.is-active {
+  background: #2563eb;
+  cursor: pointer;
+}
+
+.roomsketch-wizard-button.is-disabled {
+  background: #cbd5e1;
+  cursor: default;
+}
