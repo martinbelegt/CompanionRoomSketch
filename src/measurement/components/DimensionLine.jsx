@@ -47,7 +47,7 @@ import { Line, Circle, Text, Label, Tag } from "react-konva";
 
 import { formatDistanceAuto } from "../utils/unitConversion";
 
-const DIMENSION_COLOR = "#2563eb";
+const DIMENSION_COLOR = "#4b5563";
 const LABEL_BACKGROUND = "white";
 
 const DIMENSION_OFFSET = 20;
@@ -134,7 +134,7 @@ function DimensionLine({ startPoint, endPoint, distanceMm }) {
       <Line
         points={[offsetStart.x, offsetStart.y, offsetEnd.x, offsetEnd.y]}
         stroke={DIMENSION_COLOR}
-        strokeWidth={2}
+        strokeWidth={1}
       />
 
       <Line
@@ -152,13 +152,13 @@ function DimensionLine({ startPoint, endPoint, distanceMm }) {
       <Line
         points={createTickPoints(offsetStart, normal, TICK_LENGTH)}
         stroke={DIMENSION_COLOR}
-        strokeWidth={2}
+        strokeWidth={1}
       />
 
       <Line
         points={createTickPoints(offsetEnd, normal, TICK_LENGTH)}
         stroke={DIMENSION_COLOR}
-        strokeWidth={2}
+        strokeWidth={1}
       />
 
       <Circle
@@ -182,7 +182,7 @@ function DimensionLine({ startPoint, endPoint, distanceMm }) {
           width={estimatedLabelWidth}
           align="center"
           padding={6}
-          fontSize={16}
+          fontSize={13}
           fill={DIMENSION_COLOR}
         />
       </Label>

@@ -2,6 +2,8 @@ import { useState } from "react";
 
 import "./Sidebar.css";
 
+import RoomSketchWizard from "../Wizard/RoomSketchWizard";
+
 const starterFurnitureGroups = [
   {
     id: "living",
@@ -107,6 +109,7 @@ function Sidebar({
 
   return (
     <aside className="sidebar">
+      <RoomSketchWizard />
       <div className="sidebar-card sidebar-card-blue">
         <div className="sidebar-section-title">👋 Companion Coach</div>
 
