@@ -1,10 +1,11 @@
 import { useState } from "react";
 
 import WizardStepWelcome from "./Steps/WizardStepWelcome";
+import WizardProgress from "./WizardProgress";
 
 import "./RoomSketchWizard.css";
 
-function RoomSketchWizard() {
+function RoomSketchWizard({ onSelectTool }) {
   const [step, setStep] = useState(1);
   const [selectedMode, setSelectedMode] = useState("");
 
@@ -14,6 +15,8 @@ function RoomSketchWizard() {
         <div className="roomsketch-wizard-header">🧙 RoomSketch Wizard</div>
 
         <div className="roomsketch-wizard-body">
+          <WizardProgress currentStep={1} />
+          <WizardProgress currentStep={2} />
           <div className="roomsketch-wizard-step">Stap 2 van 5</div>
 
           <p>
@@ -75,7 +78,13 @@ function RoomSketchWizard() {
         <WizardStepWelcome
           selectedMode={selectedMode}
           onChange={setSelectedMode}
-          onNext={() => setStep(2)}
+          onNext={() => {
+            if (selectedMode === "known") {
+              onSelectTool("measure");
+            }
+
+            setStep(2);
+          }}
         />
       </div>
     </div>

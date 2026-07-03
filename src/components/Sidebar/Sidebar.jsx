@@ -109,7 +109,7 @@ function Sidebar({
 
   return (
     <aside className="sidebar">
-      <RoomSketchWizard />
+      <RoomSketchWizard onSelectTool={onSelectTool} />
 
       <div className="sidebar-card sidebar-card-blue">
         <div className="sidebar-section-title">👋 Companion Coach</div>
