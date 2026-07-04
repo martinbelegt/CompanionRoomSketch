@@ -107,6 +107,7 @@ function CanvasEngine({
   onUpdateWindowPosition,
   resetCanvasRequest,
   showWallDimensions,
+  showFloorplan,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -227,8 +228,6 @@ function CanvasEngine({
 
       addWall(wall);
 
-      addWall(wall);
-
       setWallStartPoint(null);
       onSelectTool("select");
 
@@ -339,7 +338,7 @@ function CanvasEngine({
         onMouseDown={handleStageMouseDown}
       >
         <Layer>
-          <FloorplanLayer />
+          {showFloorplan && <FloorplanLayer />}
 
           <WallLayer
             walls={walls}

@@ -32,6 +32,7 @@ function Canvas({
   onUpdateWindowPosition,
   resetCanvasRequest,
   showWallDimensions,
+  showFloorplan,
 }) {
   return (
     <CanvasEngine
@@ -64,6 +65,7 @@ function Canvas({
       onUpdateWindowPosition={onUpdateWindowPosition}
       resetCanvasRequest={resetCanvasRequest}
       showWallDimensions={showWallDimensions}
+      showFloorplan={showFloorplan}
     />
   );
 }

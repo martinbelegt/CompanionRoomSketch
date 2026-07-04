@@ -47,6 +47,7 @@ function AppLayout() {
   const [selectedObject, setSelectedObject] = useState(null);
 
   const [showWallDimensions, setShowWallDimensions] = useState(true);
+  const [showFloorplan, setShowFloorplan] = useState(true);
 
   const [resetCanvasRequest, setResetCanvasRequest] = useState(0);
 
@@ -98,6 +99,10 @@ function AppLayout() {
 
   function toggleWallDimensions() {
     setShowWallDimensions((current) => !current);
+  }
+
+  function toggleFloorplan() {
+    setShowFloorplan((current) => !current);
   }
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
@@ -456,6 +461,8 @@ function AppLayout() {
           onResetCanvasView={resetCanvasView}
           showWallDimensions={showWallDimensions}
           onToggleWallDimensions={toggleWallDimensions}
+          showFloorplan={showFloorplan}
+          onToggleFloorplan={toggleFloorplan}
         />
 
         <Canvas
@@ -488,6 +495,7 @@ function AppLayout() {
           onUpdateWindowPosition={updateWindowPosition}
           resetCanvasRequest={resetCanvasRequest}
           showWallDimensions={showWallDimensions}
+          showFloorplan={showFloorplan}
         />
 
         <Inspector

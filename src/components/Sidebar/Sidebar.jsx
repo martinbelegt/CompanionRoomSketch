@@ -80,6 +80,8 @@ function Sidebar({
   onResetCanvasView,
   showWallDimensions,
   onToggleWallDimensions,
+  showFloorplan,
+  onToggleFloorplan,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
@@ -190,6 +192,10 @@ function Sidebar({
 
         <button className="sidebar-button" onClick={onToggleWallDimensions}>
           {showWallDimensions ? "📐 Maten verbergen" : "📐 Maten tonen"}
+        </button>
+
+        <button className="sidebar-button" onClick={onToggleFloorplan}>
+          {showFloorplan ? "👁 Achtergrond verbergen" : "👁 Achtergrond tonen"}
         </button>
 
         <button className="sidebar-button" onClick={onClearWalls}>
