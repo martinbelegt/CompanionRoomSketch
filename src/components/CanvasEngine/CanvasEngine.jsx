@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import "./CanvasEngine.css";
 
-import { Stage, Layer } from "react-konva";
+import { Stage, Layer, Text, Circle } from "react-konva";
 import useCanvasSize from "../../hooks/useCanvasSize";
 import useCanvasCamera from "./Hooks/useCanvasCamera";
 
@@ -119,6 +119,7 @@ function CanvasEngine({
   roomDraftWallIds,
   onToggleRoomDraftWall,
   onSelectRoomByWallId,
+  onSelectRoom,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -378,6 +379,36 @@ function CanvasEngine({
             selectedRoomId={selectedRoomId}
             roomDraftWallIds={roomDraftWallIds}
           />
+          {rooms.map((room) => (
+            <React.Fragment key={room.id}>
+              <Circle
+                x={room.center?.x ?? 0}
+                y={room.center?.y ?? 0}
+                radius={60}
+                fill="transparent"
+                onClick={(e) => {
+                  e.cancelBubble = true;
+                  onSelectRoom(room.id);
+                }}
+              />
+
+              <Text
+                x={(room.center?.x ?? 0) - 45}
+                y={(room.center?.y ?? 0) - 10}
+                width={90}
+                text={room.name}
+                align="center"
+                fontSize={16}
+                fontStyle="bold"
+                fill={room.id === selectedRoomId ? "#2563eb" : "#374151"}
+                onClick={(e) => {
+                  e.cancelBubble = true;
+                  onSelectRoom(room.id);
+                }}
+              />
+            </React.Fragment>
+          ))}
+
           <DoorLayer
             doors={doors}
             walls={walls}

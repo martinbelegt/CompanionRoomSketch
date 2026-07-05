@@ -97,6 +97,13 @@ function AppLayout() {
   function selectObject(type, id) {
     setSelectedObject({ type, id });
   }
+
+  function clearSelection() {
+    setSelectedObject(null);
+    setSelectedWallId(null);
+    setSelectedRoomId(null);
+  }
+
   function clearWalls() {
     setWalls([]);
   }
@@ -401,6 +408,23 @@ function AppLayout() {
     );
   }
 
+  function getRoomCenter(wallIds) {
+    const roomWalls = walls.filter((wall) => wallIds.includes(wall.id));
+    const points = roomWalls.flatMap((wall) => [
+      wall.startPoint,
+      wall.endPoint,
+    ]);
+
+    if (!points.length) {
+      return { x: 0, y: 0 };
+    }
+
+    return {
+      x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+      y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+    };
+  }
+
   function saveRoomDraft() {
     if (roomDraftWallIds.length < 3) {
       window.alert("Kies minimaal 3 muren voor een ruimte.");
@@ -415,12 +439,19 @@ function AppLayout() {
       id: crypto.randomUUID(),
       name,
       wallIds: roomDraftWallIds,
+      center: getRoomCenter(roomDraftWallIds),
     };
 
     setRooms((current) => [...current, room]);
     setSelectedRoomId(room.id);
     setRoomDraftWallIds([]);
     setActiveTool("select");
+  }
+
+  function selectRoom(id) {
+    setSelectedRoomId(id);
+    setSelectedWallId(null);
+    setSelectedObject(null);
   }
 
   function selectRoomByWallId(wallId) {
@@ -573,7 +604,7 @@ function AppLayout() {
           onSelectTool={setActiveTool}
           selectedObject={selectedObject}
           onSelectObject={selectObject}
-          onClearSelection={() => setSelectedObject(null)}
+          onClearSelection={clearSelection}
           windows={windows}
           addWindow={addWindow}
           onUpdateWindowPosition={updateWindowPosition}
@@ -585,6 +616,7 @@ function AppLayout() {
           roomDraftWallIds={roomDraftWallIds}
           onToggleRoomDraftWall={toggleRoomDraftWall}
           onSelectRoomByWallId={selectRoomByWallId}
+          onSelectRoom={selectRoom}
         />
 
         <Inspector
