@@ -82,6 +82,9 @@ function Sidebar({
   onToggleWallDimensions,
   showFloorplan,
   onToggleFloorplan,
+  onStartRoomDraft,
+  roomDraftWallIds = [],
+  onSaveRoomDraft,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
@@ -112,26 +115,6 @@ function Sidebar({
   return (
     <aside className="sidebar">
       <RoomSketchWizard onSelectTool={onSelectTool} />
-
-      <div className="sidebar-card sidebar-card-blue">
-        <div className="sidebar-section-title">👋 Companion Coach</div>
-
-        <div className="sidebar-progress">
-          <div className="sidebar-progress-fill" />
-        </div>
-
-        <div className="sidebar-small-text">17% voltooid</div>
-
-        <p className="sidebar-small-text">
-          <strong>Stap 1 van 6</strong>
-          <br />
-          We gaan samen je woning op schaal tekenen.
-        </p>
-
-        <button className="sidebar-button sidebar-primary-button">
-          Volgende stap →
-        </button>
-      </div>
 
       <div className="sidebar-card sidebar-card-gray">
         <div className="sidebar-section-title">Stap 1 • Woning tekenen</div>
@@ -165,6 +148,31 @@ function Sidebar({
           <br />
           <small>(Klik • Klik • Shift = recht)</small>
         </button>
+
+        <button
+          className="sidebar-button"
+          style={getToolButtonStyle("room")}
+          onClick={onStartRoomDraft}
+        >
+          🏠 Ruimte maken
+          <br />
+          <small>Klik de muren van één ruimte aan</small>
+        </button>
+
+        {activeTool === "room" && (
+          <>
+            <div className="sidebar-small-text">
+              Gekozen muren: {roomDraftWallIds.length}
+            </div>
+
+            <button
+              className="sidebar-button sidebar-primary-button"
+              onClick={onSaveRoomDraft}
+            >
+              Ruimte opslaan →
+            </button>
+          </>
+        )}
 
         <button
           className="sidebar-button"

@@ -12,7 +12,7 @@ export const DEFAULT_DISPLAY_UNIT = DISPLAY_UNITS.CM;
 export const DEFAULT_DECIMALS = {
   mm: 0,
   cm: 1,
-  m: 2,
+  m: 3,
 };
 
 export const SCALE_STATUS = {

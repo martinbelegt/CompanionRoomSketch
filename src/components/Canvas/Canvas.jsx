@@ -33,6 +33,12 @@ function Canvas({
   resetCanvasRequest,
   showWallDimensions,
   showFloorplan,
+  onMoveWall,
+  rooms,
+  selectedRoomId,
+  roomDraftWallIds,
+  onToggleRoomDraftWall,
+  onSelectRoomByWallId,
 }) {
   return (
     <CanvasEngine
@@ -66,6 +72,12 @@ function Canvas({
       resetCanvasRequest={resetCanvasRequest}
       showWallDimensions={showWallDimensions}
       showFloorplan={showFloorplan}
+      onMoveWall={onMoveWall}
+      rooms={rooms}
+      selectedRoomId={selectedRoomId}
+      roomDraftWallIds={roomDraftWallIds}
+      onToggleRoomDraftWall={onToggleRoomDraftWall}
+      onSelectRoomByWallId={onSelectRoomByWallId}
     />
   );
 }

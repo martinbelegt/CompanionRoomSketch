@@ -18,6 +18,7 @@ const STORAGE_KEYS = {
   walls: "companion-roomsketch-walls",
   doors: "companion-roomsketch-doors",
   windows: "companion-roomsketch-windows",
+  rooms: "companion-roomsketch-rooms",
 };
 
 function loadFromStorage(key, fallback) {
@@ -50,6 +51,13 @@ function AppLayout() {
   const [showFloorplan, setShowFloorplan] = useState(true);
 
   const [resetCanvasRequest, setResetCanvasRequest] = useState(0);
+
+  const [rooms, setRooms] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.rooms, []),
+  );
+
+  const [selectedRoomId, setSelectedRoomId] = useState(null);
+  const [roomDraftWallIds, setRoomDraftWallIds] = useState([]);
 
   function addWall(wall) {
     setWalls((current) => [...current, wall]);
@@ -141,6 +149,10 @@ function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.windows, JSON.stringify(windows));
   }, [windows]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.rooms, JSON.stringify(rooms));
+  }, [rooms]);
 
   function addFurniture(catalogId) {
     const template =
@@ -349,10 +361,78 @@ function AppLayout() {
     );
   }
 
+  function moveWall(id, delta) {
+    setWalls((current) =>
+      current.map((wall) =>
+        wall.id !== id
+          ? wall
+          : {
+              ...wall,
+              startPoint: {
+                x: wall.startPoint.x + delta.x,
+                y: wall.startPoint.y + delta.y,
+              },
+              endPoint: {
+                x: wall.endPoint.x + delta.x,
+                y: wall.endPoint.y + delta.y,
+              },
+            },
+      ),
+    );
+  }
+
   function updateFurnitureSize(id, size) {
     setFurniture((current) =>
       current.map((item) => (item.id === id ? { ...item, ...size } : item)),
     );
+  }
+
+  function startRoomDraft() {
+    setRoomDraftWallIds([]);
+    setSelectedRoomId(null);
+    setActiveTool("room");
+  }
+
+  function toggleRoomDraftWall(wallId) {
+    setRoomDraftWallIds((current) =>
+      current.includes(wallId)
+        ? current.filter((id) => id !== wallId)
+        : [...current, wallId],
+    );
+  }
+
+  function saveRoomDraft() {
+    if (roomDraftWallIds.length < 3) {
+      window.alert("Kies minimaal 3 muren voor een ruimte.");
+      return;
+    }
+
+    const name = window.prompt("Naam van deze ruimte:", "Woonkamer");
+
+    if (!name) return;
+
+    const room = {
+      id: crypto.randomUUID(),
+      name,
+      wallIds: roomDraftWallIds,
+    };
+
+    setRooms((current) => [...current, room]);
+    setSelectedRoomId(room.id);
+    setRoomDraftWallIds([]);
+    setActiveTool("select");
+  }
+
+  function selectRoomByWallId(wallId) {
+    const room = rooms.find((item) => item.wallIds.includes(wallId));
+
+    if (!room) {
+      setSelectedRoomId(null);
+      return false;
+    }
+
+    setSelectedRoomId(room.id);
+    return true;
   }
 
   useEffect(() => {
@@ -463,6 +543,9 @@ function AppLayout() {
           onToggleWallDimensions={toggleWallDimensions}
           showFloorplan={showFloorplan}
           onToggleFloorplan={toggleFloorplan}
+          onStartRoomDraft={startRoomDraft}
+          roomDraftWallIds={roomDraftWallIds}
+          onSaveRoomDraft={saveRoomDraft}
         />
 
         <Canvas
@@ -486,6 +569,7 @@ function AppLayout() {
           selectedWallId={selectedWallId}
           onSelectWall={setSelectedWallId}
           onUpdateWallPoint={updateWallPoint}
+          onMoveWall={moveWall}
           onSelectTool={setActiveTool}
           selectedObject={selectedObject}
           onSelectObject={selectObject}
@@ -496,6 +580,11 @@ function AppLayout() {
           resetCanvasRequest={resetCanvasRequest}
           showWallDimensions={showWallDimensions}
           showFloorplan={showFloorplan}
+          rooms={rooms}
+          selectedRoomId={selectedRoomId}
+          roomDraftWallIds={roomDraftWallIds}
+          onToggleRoomDraftWall={toggleRoomDraftWall}
+          onSelectRoomByWallId={selectRoomByWallId}
         />
 
         <Inspector

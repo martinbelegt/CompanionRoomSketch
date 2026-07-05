@@ -1,7 +1,7 @@
 import "./WizardProgress.css";
 
 function WizardProgress({ currentStep }) {
-  const steps = ["Welkom", "Plattegrond", "Kalibreren", "Muren", "Klaar"];
+  const steps = ["Welkom", "Plattegrond", "Maten kloppen", "Muren", "Klaar"];
 
   const percentage = ((currentStep - 1) / (steps.length - 1)) * 100;
 

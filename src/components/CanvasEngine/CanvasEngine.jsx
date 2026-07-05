@@ -39,7 +39,12 @@ function getDistance(pointA, pointB) {
 }
 
 function snapPointWithShift(pointA, pointB, shiftKey) {
-  if (!shiftKey || !pointA) return pointB;
+  if (!pointA) return pointB;
+
+  // Shift = vrije richting
+  if (shiftKey) {
+    return pointB;
+  }
 
   const dx = pointB.x - pointA.x;
   const dy = pointB.y - pointA.y;
@@ -108,6 +113,12 @@ function CanvasEngine({
   resetCanvasRequest,
   showWallDimensions,
   showFloorplan,
+  onMoveWall,
+  rooms,
+  selectedRoomId,
+  roomDraftWallIds,
+  onToggleRoomDraftWall,
+  onSelectRoomByWallId,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -228,8 +239,10 @@ function CanvasEngine({
 
       addWall(wall);
 
-      setWallStartPoint(null);
-      onSelectTool("select");
+      // Sprint 31.2:
+      // Na het plaatsen van een muur blijft RoomSketch in muurmodus.
+      // De volgende muur start automatisch op het eindpunt van de vorige muur.
+      setWallStartPoint(finalEndPoint);
 
       return;
     }
@@ -285,8 +298,15 @@ function CanvasEngine({
     measurementPoints.length === 1 &&
     calibration?.mmPerPixel;
 
+  const liveMeasurementEndPoint =
+    hasLiveMeasurement && livePointA
+      ? snapPointWithShift(livePointA, cursor, shiftPressed)
+      : cursor;
+
   const livePixelDistance =
-    hasLiveMeasurement && livePointA ? getDistance(livePointA, cursor) : null;
+    hasLiveMeasurement && livePointA
+      ? getDistance(livePointA, liveMeasurementEndPoint)
+      : null;
 
   const liveDistanceMm = getMeasuredDistanceMm(livePixelDistance, calibration);
 
@@ -294,6 +314,10 @@ function CanvasEngine({
     currentTool === "wall" ? findSnapPoint(cursor, walls) : null;
 
   function handleWallClick(wall) {
+    if (currentTool === "room") {
+      onToggleRoomDraftWall(wall.id);
+      return;
+    }
     if (currentTool === "door") {
       addDoor(createDoor(wall.id, getWallCenter(wall)));
 
@@ -307,8 +331,12 @@ function CanvasEngine({
       return;
     }
 
-    onSelectWall(wall.id);
-    onSelectObject("wall", wall.id);
+    const roomWasSelected = onSelectRoomByWallId(wall.id);
+
+    if (!roomWasSelected) {
+      onSelectWall(wall.id);
+      onSelectObject("wall", wall.id);
+    }
   }
 
   return (
@@ -345,6 +373,10 @@ function CanvasEngine({
             selectedWallId={selectedWallId}
             onWallClick={handleWallClick}
             onUpdateWallPoint={onUpdateWallPoint}
+            onMoveWall={onMoveWall}
+            rooms={rooms}
+            selectedRoomId={selectedRoomId}
+            roomDraftWallIds={roomDraftWallIds}
           />
           <DoorLayer
             doors={doors}
@@ -404,7 +436,7 @@ function CanvasEngine({
           {hasLiveMeasurement && liveDistanceMm != null && (
             <DimensionLine
               startPoint={livePointA}
-              endPoint={cursor}
+              endPoint={liveMeasurementEndPoint}
               distanceMm={liveDistanceMm}
             />
           )}
