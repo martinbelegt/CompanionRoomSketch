@@ -31,6 +31,8 @@ import WindowLayer from "./Layers/WindowLayer";
 import WallDimensionLayer from "./Layers/WallDimensionLayer";
 import { createWindow } from "../../windows/windowUtils";
 
+import RoomLayer from "./Layers/RoomLayer";
+
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
   const dy = pointB.y - pointA.y;
@@ -120,6 +122,7 @@ function CanvasEngine({
   onToggleRoomDraftWall,
   onSelectRoomByWallId,
   onSelectRoom,
+  onMoveRoom,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -379,35 +382,12 @@ function CanvasEngine({
             selectedRoomId={selectedRoomId}
             roomDraftWallIds={roomDraftWallIds}
           />
-          {rooms.map((room) => (
-            <React.Fragment key={room.id}>
-              <Circle
-                x={room.center?.x ?? 0}
-                y={room.center?.y ?? 0}
-                radius={60}
-                fill="transparent"
-                onClick={(e) => {
-                  e.cancelBubble = true;
-                  onSelectRoom(room.id);
-                }}
-              />
-
-              <Text
-                x={(room.center?.x ?? 0) - 45}
-                y={(room.center?.y ?? 0) - 10}
-                width={90}
-                text={room.name}
-                align="center"
-                fontSize={16}
-                fontStyle="bold"
-                fill={room.id === selectedRoomId ? "#2563eb" : "#374151"}
-                onClick={(e) => {
-                  e.cancelBubble = true;
-                  onSelectRoom(room.id);
-                }}
-              />
-            </React.Fragment>
-          ))}
+          <RoomLayer
+            rooms={rooms}
+            selectedRoomId={selectedRoomId}
+            onSelectRoom={onSelectRoom}
+            onMoveRoom={onMoveRoom}
+          />
 
           <DoorLayer
             doors={doors}

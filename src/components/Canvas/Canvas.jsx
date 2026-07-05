@@ -40,6 +40,7 @@ function Canvas({
   onToggleRoomDraftWall,
   onSelectRoomByWallId,
   onSelectRoom,
+  onMoveRoom,
 }) {
   return (
     <CanvasEngine
@@ -80,6 +81,7 @@ function Canvas({
       onToggleRoomDraftWall={onToggleRoomDraftWall}
       onSelectRoomByWallId={onSelectRoomByWallId}
       onSelectRoom={onSelectRoom}
+      onMoveRoom={onMoveRoom}
     />
   );
 }

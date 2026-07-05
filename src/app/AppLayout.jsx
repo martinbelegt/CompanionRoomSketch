@@ -388,6 +388,44 @@ function AppLayout() {
     );
   }
 
+  function moveRoom(roomId, delta) {
+    const room = rooms.find((item) => item.id === roomId);
+
+    if (!room) return;
+
+    setWalls((current) =>
+      current.map((wall) =>
+        room.wallIds.includes(wall.id)
+          ? {
+              ...wall,
+              startPoint: {
+                x: wall.startPoint.x + delta.x,
+                y: wall.startPoint.y + delta.y,
+              },
+              endPoint: {
+                x: wall.endPoint.x + delta.x,
+                y: wall.endPoint.y + delta.y,
+              },
+            }
+          : wall,
+      ),
+    );
+
+    setRooms((current) =>
+      current.map((item) =>
+        item.id === roomId
+          ? {
+              ...item,
+              center: {
+                x: (item.center?.x ?? 0) + delta.x,
+                y: (item.center?.y ?? 0) + delta.y,
+              },
+            }
+          : item,
+      ),
+    );
+  }
+
   function updateFurnitureSize(id, size) {
     setFurniture((current) =>
       current.map((item) => (item.id === id ? { ...item, ...size } : item)),
@@ -617,6 +655,7 @@ function AppLayout() {
           onToggleRoomDraftWall={toggleRoomDraftWall}
           onSelectRoomByWallId={selectRoomByWallId}
           onSelectRoom={selectRoom}
+          onMoveRoom={moveRoom}
         />
 
         <Inspector
