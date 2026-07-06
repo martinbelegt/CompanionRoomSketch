@@ -9,6 +9,7 @@ function WallLayer({
   doors = [],
   selectedWallId,
   onWallClick,
+  onWallMouseDown,
   onUpdateWallPoint,
   onMoveWall,
   rooms = [],
@@ -48,6 +49,7 @@ function WallLayer({
               }}
               onMouseDown={(e) => {
                 e.cancelBubble = true;
+                onWallMouseDown?.(wall);
               }}
               onDragStart={(e) => {
                 e.cancelBubble = true;

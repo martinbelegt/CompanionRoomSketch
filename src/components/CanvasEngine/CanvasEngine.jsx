@@ -126,6 +126,7 @@ function CanvasEngine({
   onMoveRoom,
   onToggleDoorDirection,
   onToggleDoorSwing,
+  onSelectOpeningWall,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -349,6 +350,11 @@ function CanvasEngine({
   }
 
   function handleWallClick(wall) {
+    if (currentTool === "opening") {
+      onSelectOpeningWall(wall.id);
+      return;
+    }
+
     if (currentTool === "room") {
       onToggleRoomDraftWall(wall.id);
       return;
@@ -372,6 +378,12 @@ function CanvasEngine({
       onSelectWall(wall.id);
       onSelectObject("wall", wall.id);
     }
+  }
+
+  function handleWallMouseDown(wall) {
+    if (currentTool !== "opening" || wall.id !== selectedWallId) return;
+
+    onSelectOpeningWall(wall.id);
   }
 
   return (
@@ -413,6 +425,7 @@ function CanvasEngine({
             doors={doors}
             selectedWallId={selectedWallId}
             onWallClick={handleWallClick}
+            onWallMouseDown={handleWallMouseDown}
             onUpdateWallPoint={onUpdateWallPoint}
             onMoveWall={onMoveWall}
             rooms={rooms}
@@ -426,6 +439,7 @@ function CanvasEngine({
             selectedRoomIds={selectedRoomIds}
             onSelectRoom={onSelectRoom}
             onMoveRoom={onMoveRoom}
+            currentTool={currentTool}
           />
 
           <DoorLayer

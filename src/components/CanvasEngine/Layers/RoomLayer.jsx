@@ -6,7 +6,10 @@ function RoomLayer({
   selectedRoomIds = [],
   onSelectRoom,
   onMoveRoom,
+  currentTool,
 }) {
+  const isOpeningMode = currentTool === "opening";
+
   return (
     <>
       {rooms.map((room) => (
@@ -14,7 +17,8 @@ function RoomLayer({
           key={room.id}
           x={room.center?.x ?? 0}
           y={room.center?.y ?? 0}
-          draggable={room.id === selectedRoomId}
+          listening={!isOpeningMode}
+          draggable={!isOpeningMode && room.id === selectedRoomId}
           onMouseDown={(e) => {
             e.cancelBubble = true;
             onSelectRoom(
@@ -66,7 +70,7 @@ function RoomLayer({
               width={room.bounds.width}
               height={room.bounds.height}
               fill="rgba(37,99,235,0.01)"
-              listening
+              listening={!isOpeningMode}
               onClick={(e) => {
                 e.cancelBubble = true;
                 onSelectRoom(
@@ -77,7 +81,11 @@ function RoomLayer({
             />
           )}
 
-          <Circle radius={120} fill="rgba(37, 99, 235, 0.01)" />
+          <Circle
+            radius={120}
+            fill="rgba(37, 99, 235, 0.01)"
+            listening={!isOpeningMode}
+          />
 
           <Text
             x={-45}
@@ -92,6 +100,7 @@ function RoomLayer({
                 ? "#2563eb"
                 : "#374151"
             }
+            listening={!isOpeningMode}
             onClick={(e) => {
               e.cancelBubble = true;
               onSelectRoom(

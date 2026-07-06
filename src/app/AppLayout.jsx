@@ -159,7 +159,7 @@ function AppLayout() {
   const [activeTool, setActiveTool] = useState("select");
 
   const [pendingFurniture, setPendingFurniture] = useState(null);
-  const [, setPendingOpening] = useState(null);
+  const [pendingOpening, setPendingOpening] = useState(null);
 
   useEffect(() => {
     if (activeTool === "rectangleRoom") {
@@ -536,6 +536,85 @@ function AppLayout() {
     setActiveTool("opening");
   }
 
+  function splitWallForOpening(wall, widthMm) {
+    const openingWidthPx = Number(widthMm) / (calibration?.mmPerPixel ?? 10);
+    const dx = wall.endPoint.x - wall.startPoint.x;
+    const dy = wall.endPoint.y - wall.startPoint.y;
+    const wallLength = Math.sqrt(dx * dx + dy * dy);
+
+    if (!wallLength || !Number.isFinite(openingWidthPx) || openingWidthPx <= 0) {
+      window.alert("Vul een geldige breedte voor de opening in.");
+      return null;
+    }
+
+    if (openingWidthPx >= wallLength) {
+      window.alert("De opening is breder dan deze muur.");
+      return null;
+    }
+
+    const unitX = dx / wallLength;
+    const unitY = dy / wallLength;
+    const openingStart = wallLength / 2 - openingWidthPx / 2;
+    const openingEnd = wallLength / 2 + openingWidthPx / 2;
+
+    function pointAt(distance) {
+      return {
+        x: wall.startPoint.x + unitX * distance,
+        y: wall.startPoint.y + unitY * distance,
+      };
+    }
+
+    return [
+      createWall(wall.startPoint, pointAt(openingStart)),
+      createWall(pointAt(openingEnd), wall.endPoint),
+    ];
+  }
+
+  function createOpeningInWall(wallId) {
+    const wall = walls.find((item) => item.id === wallId);
+    const nextWalls = wall
+      ? splitWallForOpening(wall, pendingOpening?.widthMm)
+      : null;
+
+    if (!wall || !nextWalls) return;
+
+    setWalls((current) =>
+      current.flatMap((item) => (item.id === wallId ? nextWalls : [item])),
+    );
+
+    setRooms((current) =>
+      current.map((room) =>
+        room.wallIds.includes(wallId)
+          ? {
+              ...room,
+              wallIds: room.wallIds.flatMap((id) =>
+                id === wallId ? nextWalls.map((item) => item.id) : [id],
+              ),
+            }
+          : room,
+      ),
+    );
+
+    setPendingOpening(null);
+    setSelectedWallId(null);
+    setSelectedObject(null);
+    setActiveTool("select");
+  }
+
+  function selectOpeningWall(wallId) {
+    if (activeTool === "opening" && pendingOpening?.wallId === wallId) {
+      createOpeningInWall(wallId);
+      return;
+    }
+
+    setPendingOpening((current) => ({
+      ...(current ?? {}),
+      wallId,
+    }));
+    setSelectedWallId(wallId);
+    setSelectedObject({ type: "wall", id: wallId });
+  }
+
   function toggleRoomDraftWall(wallId) {
     setRoomDraftWallIds((current) =>
       current.includes(wallId)
@@ -867,6 +946,7 @@ function AppLayout() {
           onToggleDoorDirection={toggleDoorDirection}
           onToggleDoorSwing={toggleDoorSwing}
           selectedRoomIds={selectedRoomIds}
+          onSelectOpeningWall={selectOpeningWall}
         />
 
         <Inspector
