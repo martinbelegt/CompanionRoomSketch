@@ -108,6 +108,19 @@ function AppLayout() {
     );
   }
 
+  function toggleDoorSwing(id) {
+    setDoors((current) =>
+      current.map((door) =>
+        door.id === id
+          ? {
+              ...door,
+              swing: door.swing === "left" ? "right" : "left",
+            }
+          : door,
+      ),
+    );
+  }
+
   function selectObject(type, id) {
     setSelectedObject({ type, id });
   }
@@ -723,6 +736,7 @@ function AppLayout() {
           onSelectRoom={selectRoom}
           onMoveRoom={moveRoom}
           onToggleDoorDirection={toggleDoorDirection}
+          onToggleDoorSwing={toggleDoorSwing}
         />
 
         <Inspector
