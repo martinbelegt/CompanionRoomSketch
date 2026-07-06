@@ -66,6 +66,7 @@ function DoorLayer({
   selectedObject,
   onSelectObject,
   onUpdateDoorPosition,
+  onToggleDoorDirection,
 }) {
   const mmPerPixel = calibration?.mmPerPixel ?? DEFAULT_MM_PER_PIXEL;
 
@@ -158,6 +159,10 @@ function DoorLayer({
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;
+            }}
+            onDblClick={(e) => {
+              e.cancelBubble = true;
+              onToggleDoorDirection(door.id);
             }}
           >
             <Arc

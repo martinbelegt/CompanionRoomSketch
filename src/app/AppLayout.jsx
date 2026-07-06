@@ -94,6 +94,20 @@ function AppLayout() {
       ),
     );
   }
+
+  function toggleDoorDirection(id) {
+    setDoors((current) =>
+      current.map((door) =>
+        door.id === id
+          ? {
+              ...door,
+              direction: door.direction === "inside" ? "outside" : "inside",
+            }
+          : door,
+      ),
+    );
+  }
+
   function selectObject(type, id) {
     setSelectedObject({ type, id });
   }
@@ -708,6 +722,7 @@ function AppLayout() {
           onSelectRoomByWallId={selectRoomByWallId}
           onSelectRoom={selectRoom}
           onMoveRoom={moveRoom}
+          onToggleDoorDirection={toggleDoorDirection}
         />
 
         <Inspector

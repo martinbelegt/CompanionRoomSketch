@@ -123,6 +123,7 @@ function CanvasEngine({
   onSelectRoomByWallId,
   onSelectRoom,
   onMoveRoom,
+  onToggleDoorDirection,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
@@ -397,6 +398,7 @@ function CanvasEngine({
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
             onUpdateDoorPosition={onUpdateDoorPosition}
+            onToggleDoorDirection={onToggleDoorDirection}
           />
           <WindowLayer
             windows={windows}
