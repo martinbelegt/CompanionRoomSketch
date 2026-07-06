@@ -374,6 +374,7 @@ function CanvasEngine({
 
           <WallLayer
             walls={walls}
+            doors={doors}
             selectedWallId={selectedWallId}
             onWallClick={handleWallClick}
             onUpdateWallPoint={onUpdateWallPoint}

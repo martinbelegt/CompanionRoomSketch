@@ -10,6 +10,9 @@ function Inspector({
   furniture,
   onUpdateFurnitureSize,
   onDeleteSelectedFurniture,
+  selectedObject,
+  doors,
+  onUpdateDoor,
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -18,6 +21,22 @@ function Inspector({
   const selectedFurniture = furniture.find(
     (item) => item.id === selectedFurnitureId,
   );
+
+  const selectedDoor =
+    selectedObject?.type === "door"
+      ? doors.find((door) => door.id === selectedObject.id)
+      : null;
+
+  useEffect(() => {
+    if (!selectedDoor) {
+      setDoorWidth("");
+      return;
+    }
+
+    setDoorWidth(String(selectedDoor.widthMm));
+  }, [selectedDoor]);
+
+  const [doorWidth, setDoorWidth] = useState("");
 
   const hasValidCalibration =
     calibration?.mmPerPixel != null && !Number.isNaN(calibration.mmPerPixel);
@@ -194,6 +213,34 @@ function Inspector({
           </>
         ) : (
           <p className="muted">Klik op een meubel om het te selecteren.</p>
+        )}
+      </section>
+      <section className="inspector-section">
+        <h3>🚪 Geselecteerde deur</h3>
+
+        {selectedDoor ? (
+          <>
+            <label className="field-label">
+              Breedte (mm)
+              <input
+                value={doorWidth}
+                onChange={(e) => setDoorWidth(e.target.value)}
+              />
+            </label>
+
+            <button
+              className="primary-button"
+              onClick={() =>
+                onUpdateDoor(selectedDoor.id, {
+                  widthMm: Number(doorWidth),
+                })
+              }
+            >
+              Breedte toepassen
+            </button>
+          </>
+        ) : (
+          <p className="muted">Klik op een deur.</p>
         )}
       </section>
     </aside>

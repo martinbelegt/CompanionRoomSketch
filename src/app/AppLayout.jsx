@@ -393,6 +393,7 @@ function AppLayout() {
 
     if (!room) return;
 
+    // Muren
     setWalls((current) =>
       current.map((wall) =>
         room.wallIds.includes(wall.id)
@@ -411,14 +412,45 @@ function AppLayout() {
       ),
     );
 
+    // Deuren
+    setDoors((current) =>
+      current.map((door) =>
+        room.wallIds.includes(door.wallId)
+          ? {
+              ...door,
+              position: {
+                x: door.position.x + delta.x,
+                y: door.position.y + delta.y,
+              },
+            }
+          : door,
+      ),
+    );
+
+    // Ramen
+    setWindows((current) =>
+      current.map((windowItem) =>
+        room.wallIds.includes(windowItem.wallId)
+          ? {
+              ...windowItem,
+              position: {
+                x: windowItem.position.x + delta.x,
+                y: windowItem.position.y + delta.y,
+              },
+            }
+          : windowItem,
+      ),
+    );
+
+    // Middelpunt van de ruimte
     setRooms((current) =>
       current.map((item) =>
         item.id === roomId
           ? {
               ...item,
               center: {
-                x: (item.center?.x ?? 0) + delta.x,
-                y: (item.center?.y ?? 0) + delta.y,
+                x: item.center.x + delta.x,
+                y: item.center.y + delta.y,
               },
             }
           : item,
@@ -558,11 +590,25 @@ function AppLayout() {
       if (
         ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)
       ) {
-        if (!selectedFurnitureId) return;
-
         e.preventDefault();
 
         const step = e.shiftKey ? 10 : 1;
+
+        // Eerst: geselecteerde ruimte
+        if (selectedRoomId) {
+          let delta = { x: 0, y: 0 };
+
+          if (e.code === "ArrowUp") delta = { x: 0, y: -step };
+          if (e.code === "ArrowDown") delta = { x: 0, y: step };
+          if (e.code === "ArrowLeft") delta = { x: -step, y: 0 };
+          if (e.code === "ArrowRight") delta = { x: step, y: 0 };
+
+          moveRoom(selectedRoomId, delta);
+          return;
+        }
+
+        // Daarna pas meubels
+        if (!selectedFurnitureId) return;
 
         setFurniture((current) =>
           current.map((item) => {
@@ -592,7 +638,13 @@ function AppLayout() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [selectedFurnitureId, selectedWallId, selectedObject]);
+  }, [
+    selectedFurnitureId,
+    selectedWallId,
+    selectedObject,
+    selectedRoomId,
+    rooms,
+  ]);
 
   return (
     <div className="app-layout">

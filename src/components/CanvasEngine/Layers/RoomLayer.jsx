@@ -28,7 +28,7 @@ function RoomLayer({ rooms = [], selectedRoomId, onSelectRoom, onMoveRoom }) {
             });
           }}
         >
-          <Circle radius={60} fill="transparent" />
+          <Circle radius={120} fill="rgba(37, 99, 235, 0.01)" />
 
           <Text
             x={-45}

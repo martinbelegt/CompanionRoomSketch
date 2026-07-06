@@ -6,6 +6,7 @@ const WALL_WIDTH = 6;
 
 function WallLayer({
   walls = [],
+  doors = [],
   selectedWallId,
   onWallClick,
   onUpdateWallPoint,

@@ -1,4 +1,4 @@
-import { Arc, Group, Line } from "react-konva";
+import { Arc, Circle, Group, Line } from "react-konva";
 
 const DOOR_COLOR = "#92400e";
 const DOOR_SELECTED_COLOR = "#2563eb";
@@ -160,16 +160,35 @@ function DoorLayer({
               e.cancelBubble = true;
             }}
           >
+            <Arc
+              x={hinge.x}
+              y={hinge.y}
+              innerRadius={2}
+              outerRadius={2}
+              angle={360}
+              fill={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
+              stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
+            />
+
+            <Circle
+              x={hinge.x}
+              y={hinge.y}
+              radius={isSelected ? 6 : 4}
+              fill={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
+              stroke="white"
+              strokeWidth={1}
+            />
+
             <Line
               points={[
-                -normal.x * halfDoorWidthPx,
-                -normal.y * halfDoorWidthPx,
-                normal.x * halfDoorWidthPx,
-                normal.y * halfDoorWidthPx,
+                hinge.x,
+                hinge.y,
+                hinge.x + openVector.x,
+                hinge.y + openVector.y,
               ]}
               stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
-              strokeWidth={DOOR_WIDTH}
-              hitStrokeWidth={40}
+              strokeWidth={isSelected ? 6 : 4}
+              hitStrokeWidth={60}
               lineCap="round"
               listening
             />
@@ -177,12 +196,12 @@ function DoorLayer({
             <Arc
               x={hinge.x}
               y={hinge.y}
-              innerRadius={doorWidthPx}
-              outerRadius={doorWidthPx}
+              innerRadius={doorWidthPx - 1}
+              outerRadius={doorWidthPx + 1}
               angle={arcAngle}
               rotation={closedRotation}
               stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
-              strokeWidth={2}
+              strokeWidth={isSelected ? 3 : 2}
               listening={false}
             />
           </Group>
