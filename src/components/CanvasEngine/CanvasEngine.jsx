@@ -118,6 +118,7 @@ function CanvasEngine({
   onMoveWall,
   rooms,
   selectedRoomId,
+  selectedRoomIds,
   roomDraftWallIds,
   onToggleRoomDraftWall,
   onSelectRoomByWallId,
@@ -383,6 +384,7 @@ function CanvasEngine({
             onMoveWall={onMoveWall}
             rooms={rooms}
             selectedRoomId={selectedRoomId}
+            selectedRoomIds={selectedRoomIds}
             roomDraftWallIds={roomDraftWallIds}
           />
           <RoomLayer

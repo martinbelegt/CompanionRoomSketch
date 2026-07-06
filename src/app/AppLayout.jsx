@@ -57,6 +57,9 @@ function AppLayout() {
   );
 
   const [selectedRoomId, setSelectedRoomId] = useState(null);
+
+  const [selectedRoomIds, setSelectedRoomIds] = useState([]);
+
   const [roomDraftWallIds, setRoomDraftWallIds] = useState([]);
 
   function addWall(wall) {
@@ -129,6 +132,7 @@ function AppLayout() {
     setSelectedObject(null);
     setSelectedWallId(null);
     setSelectedRoomId(null);
+    setSelectedRoomIds([]);
   }
 
   function clearWalls() {
@@ -545,10 +549,25 @@ function AppLayout() {
     setActiveTool("select");
   }
 
-  function selectRoom(id) {
-    setSelectedRoomId(id);
+  function selectRoom(id, addToSelection = false) {
     setSelectedWallId(null);
     setSelectedObject(null);
+
+    if (addToSelection) {
+      setSelectedRoomIds((current) => {
+        const next = current.includes(id)
+          ? current.filter((roomId) => roomId !== id)
+          : [...current, id];
+
+        setSelectedRoomId(id);
+        return next;
+      });
+
+      return;
+    }
+
+    setSelectedRoomId(id);
+    setSelectedRoomIds([id]);
   }
 
   function selectRoomByWallId(wallId) {
@@ -560,7 +579,23 @@ function AppLayout() {
     }
 
     setSelectedRoomId(room.id);
+    setSelectedRoomIds([room.id]);
     return true;
+  }
+
+  function deleteSelectedRoom() {
+    if (!selectedRoomIds.length && !selectedRoomId) return;
+
+    const idsToDelete = selectedRoomIds.length
+      ? selectedRoomIds
+      : [selectedRoomId];
+
+    setRooms((current) =>
+      current.filter((room) => !idsToDelete.includes(room.id)),
+    );
+
+    setSelectedRoomId(null);
+    setSelectedRoomIds([]);
   }
 
   useEffect(() => {
@@ -597,6 +632,11 @@ function AppLayout() {
       }
 
       if (e.code === "Delete") {
+        if (selectedRoomId) {
+          deleteSelectedRoom();
+          return;
+        }
+
         if (selectedObject?.type === "door") {
           deleteSelectedDoor();
           return;
@@ -670,6 +710,7 @@ function AppLayout() {
     selectedWallId,
     selectedObject,
     selectedRoomId,
+    selectedRoomIds,
     rooms,
   ]);
 
@@ -737,6 +778,7 @@ function AppLayout() {
           onMoveRoom={moveRoom}
           onToggleDoorDirection={toggleDoorDirection}
           onToggleDoorSwing={toggleDoorSwing}
+          selectedRoomIds={selectedRoomIds}
         />
 
         <Inspector

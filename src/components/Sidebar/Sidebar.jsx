@@ -121,6 +121,16 @@ function Sidebar({
 
         <button
           className="sidebar-button"
+          style={getToolButtonStyle("rectangleRoom")}
+          onClick={() => toggleTool("rectangleRoom")}
+        >
+          🏠 Rechthoekige ruimte
+          <br />
+          <small>Maak snel een kamer op maat</small>
+        </button>
+
+        <button
+          className="sidebar-button"
           style={getToolButtonStyle("pan")}
           onClick={() => toggleTool("pan")}
         >

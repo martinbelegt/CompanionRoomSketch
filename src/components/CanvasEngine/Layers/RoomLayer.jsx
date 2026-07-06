@@ -1,7 +1,13 @@
 import React from "react";
 import { Circle, Group, Text } from "react-konva";
 
-function RoomLayer({ rooms = [], selectedRoomId, onSelectRoom, onMoveRoom }) {
+function RoomLayer({
+  rooms = [],
+  selectedRoomId,
+  selectedRoomIds = [],
+  onSelectRoom,
+  onMoveRoom,
+}) {
   return (
     <>
       {rooms.map((room) => (
@@ -12,20 +18,10 @@ function RoomLayer({ rooms = [], selectedRoomId, onSelectRoom, onMoveRoom }) {
           draggable={room.id === selectedRoomId}
           onClick={(e) => {
             e.cancelBubble = true;
-            onSelectRoom(room.id);
-          }}
-          onDragEnd={(e) => {
-            e.cancelBubble = true;
-
-            onMoveRoom(room.id, {
-              x: e.target.x() - (room.center?.x ?? 0),
-              y: e.target.y() - (room.center?.y ?? 0),
-            });
-
-            e.target.position({
-              x: 0,
-              y: 0,
-            });
+            onSelectRoom(
+              room.id,
+              e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey,
+            );
           }}
         >
           <Circle radius={120} fill="rgba(37, 99, 235, 0.01)" />
@@ -38,7 +34,18 @@ function RoomLayer({ rooms = [], selectedRoomId, onSelectRoom, onMoveRoom }) {
             align="center"
             fontSize={16}
             fontStyle="bold"
-            fill={room.id === selectedRoomId ? "#2563eb" : "#374151"}
+            fill={
+              selectedRoomIds.includes(room.id) || room.id === selectedRoomId
+                ? "#2563eb"
+                : "#374151"
+            }
+            onClick={(e) => {
+              e.cancelBubble = true;
+              onSelectRoom(
+                room.id,
+                e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey,
+              );
+            }}
           />
         </Group>
       ))}

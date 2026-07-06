@@ -120,6 +120,18 @@ function DoorLayer({
                 y: direction.y * doorWidthPx,
               };
 
+        const doorInset = 8;
+
+        const doorStart = {
+          x: hinge.x + (openVector.x / doorWidthPx) * doorInset,
+          y: hinge.y + (openVector.y / doorWidthPx) * doorInset,
+        };
+
+        const doorEnd = {
+          x: hinge.x + openVector.x,
+          y: hinge.y + openVector.y,
+        };
+
         const closedRotation = toDegrees(
           Math.atan2(closedVector.y, closedVector.x),
         );
@@ -191,12 +203,7 @@ function DoorLayer({
             />
 
             <Line
-              points={[
-                hinge.x,
-                hinge.y,
-                hinge.x + openVector.x,
-                hinge.y + openVector.y,
-              ]}
+              points={[doorStart.x, doorStart.y, doorEnd.x, doorEnd.y]}
               stroke={isSelected ? DOOR_SELECTED_COLOR : DOOR_COLOR}
               strokeWidth={isSelected ? 6 : 4}
               hitStrokeWidth={60}

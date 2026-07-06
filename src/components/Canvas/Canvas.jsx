@@ -36,6 +36,7 @@ function Canvas({
   onMoveWall,
   rooms,
   selectedRoomId,
+  selectedRoomIds,
   roomDraftWallIds,
   onToggleRoomDraftWall,
   onSelectRoomByWallId,
@@ -79,6 +80,7 @@ function Canvas({
       onMoveWall={onMoveWall}
       rooms={rooms}
       selectedRoomId={selectedRoomId}
+      selectedRoomIds={selectedRoomIds}
       roomDraftWallIds={roomDraftWallIds}
       onToggleRoomDraftWall={onToggleRoomDraftWall}
       onSelectRoomByWallId={onSelectRoomByWallId}
