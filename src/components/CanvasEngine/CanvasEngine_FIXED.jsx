@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import "./CanvasEngine.css";
 
@@ -210,10 +210,6 @@ function CanvasEngine({
       setIsMarqueeDragging(true);
     }
 
-    if (currentTool === "select" && e.target !== stage) {
-      return;
-    }
-
     if (
       currentTool !== "measure" &&
       currentTool !== "wall" &&
@@ -342,6 +338,8 @@ function CanvasEngine({
   const snapPoint =
     currentTool === "wall" ? findSnapPoint(cursor, walls) : null;
 
+
+
   function handleStageMouseUp() {
     if (!isMarqueeDragging) return;
 
@@ -399,11 +397,7 @@ function CanvasEngine({
         onWheel={(e) => zoomAtPointer(e.target.getStage(), e)}
         onMouseMove={updateCursor}
         onMouseDown={handleStageMouseDown}
-        onMouseUp={() => {
-          handleStageMouseUp();
-          setMarqueeStart(null);
-          setMarqueeEnd(null);
-        }}
+        onMouseUp={handleStageMouseUp}
       >
         <Layer>
           {showFloorplan && <FloorplanLayer />}

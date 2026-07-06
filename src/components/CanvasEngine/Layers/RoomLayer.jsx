@@ -1,5 +1,4 @@
-import React from "react";
-import { Circle, Group, Text } from "react-konva";
+import { Circle, Group, Rect, Text } from "react-konva";
 
 function RoomLayer({
   rooms = [],
@@ -16,6 +15,13 @@ function RoomLayer({
           x={room.center?.x ?? 0}
           y={room.center?.y ?? 0}
           draggable={room.id === selectedRoomId}
+          onMouseDown={(e) => {
+            e.cancelBubble = true;
+            onSelectRoom(
+              room.id,
+              e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey,
+            );
+          }}
           onClick={(e) => {
             e.cancelBubble = true;
             onSelectRoom(
@@ -23,7 +29,54 @@ function RoomLayer({
               e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey,
             );
           }}
+          onDragStart={(e) => {
+            e.cancelBubble = true;
+            onSelectRoom(room.id);
+          }}
+          onDragMove={(e) => {
+            e.cancelBubble = true;
+
+            const delta = {
+              x: e.target.x() - (room.center?.x ?? 0),
+              y: e.target.y() - (room.center?.y ?? 0),
+            };
+
+            if (delta.x === 0 && delta.y === 0) return;
+
+            onMoveRoom(room.id, delta);
+
+            e.target.position({
+              x: room.center?.x ?? 0,
+              y: room.center?.y ?? 0,
+            });
+          }}
+          onDragEnd={(e) => {
+            e.cancelBubble = true;
+
+            e.target.position({
+              x: room.center?.x ?? 0,
+              y: room.center?.y ?? 0,
+            });
+          }}
         >
+          {room.bounds && (
+            <Rect
+              x={room.bounds.x - (room.center?.x ?? 0)}
+              y={room.bounds.y - (room.center?.y ?? 0)}
+              width={room.bounds.width}
+              height={room.bounds.height}
+              fill="rgba(37,99,235,0.01)"
+              listening
+              onClick={(e) => {
+                e.cancelBubble = true;
+                onSelectRoom(
+                  room.id,
+                  e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey,
+                );
+              }}
+            />
+          )}
+
           <Circle radius={120} fill="rgba(37, 99, 235, 0.01)" />
 
           <Text

@@ -496,6 +496,13 @@ function AppLayout() {
                 x: item.center.x + delta.x,
                 y: item.center.y + delta.y,
               },
+              bounds: item.bounds
+                ? {
+                    ...item.bounds,
+                    x: item.bounds.x + delta.x,
+                    y: item.bounds.y + delta.y,
+                  }
+                : item.bounds,
             }
           : item,
       ),
@@ -595,6 +602,12 @@ function AppLayout() {
       center: {
         x: x + lengthPx / 2,
         y: y + widthPx / 2,
+      },
+      bounds: {
+        x,
+        y,
+        width: lengthPx,
+        height: widthPx,
       },
     };
 
