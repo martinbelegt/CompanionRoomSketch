@@ -196,6 +196,14 @@ function Sidebar({
 
         <button
           className="sidebar-button"
+          style={getToolButtonStyle("opening")}
+          onClick={() => toggleTool("opening")}
+        >
+          ⬜ Open doorgang
+        </button>
+
+        <button
+          className="sidebar-button"
           style={getToolButtonStyle("window")}
           onClick={() => toggleTool("window")}
         >
