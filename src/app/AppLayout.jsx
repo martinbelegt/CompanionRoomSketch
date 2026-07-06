@@ -7,9 +7,12 @@ import Inspector from "../components/Inspector/Inspector";
 import StatusBar from "../components/StatusBar/StatusBar";
 import furnitureCatalog from "../data/furnitureCatalog";
 import NewFurnitureDialog from "../components/NewFurnitureDialog/NewFurnitureDialog";
+import RectangleRoomDialog from "../components/RectangleRoomDialog/RectangleRoomDialog";
 
 import "../styles/AppLayout.css";
 import { createCalibration } from "../measurement";
+
+import { createWall } from "../walls/wallUtils";
 
 const STORAGE_KEYS = {
   furniture: "companion-roomsketch-placed-furniture",
@@ -153,7 +156,15 @@ function AppLayout() {
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
   const [activeTool, setActiveTool] = useState("select");
+
   const [pendingFurniture, setPendingFurniture] = useState(null);
+
+  useEffect(() => {
+    if (activeTool === "rectangleRoom") {
+      setRectangleRoomDialogOpen(true);
+      setActiveTool("select");
+    }
+  }, [activeTool]);
 
   const [measurement, setMeasurement] = useState({
     points: [],
@@ -167,6 +178,8 @@ function AppLayout() {
 
   const [temporaryTool, setTemporaryTool] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const [rectangleRoomDialogOpen, setRectangleRoomDialogOpen] = useState(false);
 
   const [myFurniture, setMyFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.myFurniture, []),
@@ -549,6 +562,51 @@ function AppLayout() {
     setActiveTool("select");
   }
 
+  function createRectangleRoom({ name, lengthMm, widthMm }) {
+    const realLengthMm = Number(lengthMm);
+    const realWidthMm = Number(widthMm);
+
+    if (!realLengthMm || !realWidthMm) return;
+
+    const mmPerPixel = calibration?.mmPerPixel ?? 10;
+
+    const x = 120 + rooms.length * 40;
+    const y = 120 + rooms.length * 40;
+
+    const lengthPx = realLengthMm / mmPerPixel;
+    const widthPx = realWidthMm / mmPerPixel;
+
+    const p1 = { x, y };
+    const p2 = { x: x + lengthPx, y };
+    const p3 = { x: x + lengthPx, y: y + widthPx };
+    const p4 = { x, y: y + widthPx };
+
+    const newWalls = [
+      createWall(p1, p2),
+      createWall(p2, p3),
+      createWall(p3, p4),
+      createWall(p4, p1),
+    ];
+
+    const room = {
+      id: crypto.randomUUID(),
+      name: name || "Nieuwe ruimte",
+      wallIds: newWalls.map((wall) => wall.id),
+      center: {
+        x: x + lengthPx / 2,
+        y: y + widthPx / 2,
+      },
+    };
+
+    setWalls((current) => [...current, ...newWalls]);
+    setRooms((current) => [...current, room]);
+
+    setSelectedRoomId(room.id);
+    setSelectedRoomIds([room.id]);
+
+    setRectangleRoomDialogOpen(false);
+  }
+
   function selectRoom(id, addToSelection = false) {
     setSelectedWallId(null);
     setSelectedObject(null);
@@ -735,6 +793,7 @@ function AppLayout() {
           onStartRoomDraft={startRoomDraft}
           roomDraftWallIds={roomDraftWallIds}
           onSaveRoomDraft={saveRoomDraft}
+          onCreate={createRectangleRoom}
         />
 
         <Canvas
@@ -798,6 +857,12 @@ function AppLayout() {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSave={saveNewFurniture}
+      />
+
+      <RectangleRoomDialog
+        open={rectangleRoomDialogOpen}
+        onClose={() => setRectangleRoomDialogOpen(false)}
+        onCreate={createRectangleRoom}
       />
     </div>
   );
