@@ -8,6 +8,7 @@ import StatusBar from "../components/StatusBar/StatusBar";
 import furnitureCatalog from "../data/furnitureCatalog";
 import NewFurnitureDialog from "../components/NewFurnitureDialog/NewFurnitureDialog";
 import RectangleRoomDialog from "../components/RectangleRoomDialog/RectangleRoomDialog";
+import OpeningDialog from "../components/OpeningDialog/OpeningDialog";
 
 import "../styles/AppLayout.css";
 import { createCalibration } from "../measurement";
@@ -158,6 +159,7 @@ function AppLayout() {
   const [activeTool, setActiveTool] = useState("select");
 
   const [pendingFurniture, setPendingFurniture] = useState(null);
+  const [, setPendingOpening] = useState(null);
 
   useEffect(() => {
     if (activeTool === "rectangleRoom") {
@@ -180,6 +182,8 @@ function AppLayout() {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const [rectangleRoomDialogOpen, setRectangleRoomDialogOpen] = useState(false);
+
+  const [openingDialogOpen, setOpeningDialogOpen] = useState(false);
 
   const [myFurniture, setMyFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.myFurniture, []),
@@ -521,6 +525,17 @@ function AppLayout() {
     setActiveTool("room");
   }
 
+  function startOpeningWorkflow() {
+    setActiveTool("select");
+    setOpeningDialogOpen(true);
+  }
+
+  function prepareOpening(input) {
+    setPendingOpening(input);
+    setOpeningDialogOpen(false);
+    setActiveTool("opening");
+  }
+
   function toggleRoomDraftWall(wallId) {
     setRoomDraftWallIds((current) =>
       current.includes(wallId)
@@ -807,6 +822,7 @@ function AppLayout() {
           roomDraftWallIds={roomDraftWallIds}
           onSaveRoomDraft={saveRoomDraft}
           onCreate={createRectangleRoom}
+          onStartOpening={startOpeningWorkflow}
         />
 
         <Canvas
@@ -876,6 +892,12 @@ function AppLayout() {
         open={rectangleRoomDialogOpen}
         onClose={() => setRectangleRoomDialogOpen(false)}
         onCreate={createRectangleRoom}
+      />
+
+      <OpeningDialog
+        open={openingDialogOpen}
+        onClose={() => setOpeningDialogOpen(false)}
+        onCreate={prepareOpening}
       />
     </div>
   );

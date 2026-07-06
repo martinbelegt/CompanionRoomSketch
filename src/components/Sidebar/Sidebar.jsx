@@ -85,6 +85,7 @@ function Sidebar({
   onStartRoomDraft,
   roomDraftWallIds = [],
   onSaveRoomDraft,
+  onStartOpening,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
@@ -197,9 +198,11 @@ function Sidebar({
         <button
           className="sidebar-button"
           style={getToolButtonStyle("opening")}
-          onClick={() => toggleTool("opening")}
+          onClick={onStartOpening}
         >
           ⬜ Open doorgang
+          <br />
+          <small>Maak een doorgang in een muur</small>
         </button>
 
         <button
