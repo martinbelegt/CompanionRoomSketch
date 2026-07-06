@@ -30,6 +30,10 @@ function loadFromStorage(key, fallback) {
   return saved ? JSON.parse(saved) : fallback;
 }
 
+function cloneCanvasState(snapshot) {
+  return JSON.parse(JSON.stringify(snapshot));
+}
+
 function AppLayout() {
   const [furniture, setFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.furniture, []),
@@ -65,18 +69,62 @@ function AppLayout() {
   const [selectedRoomIds, setSelectedRoomIds] = useState([]);
 
   const [roomDraftWallIds, setRoomDraftWallIds] = useState([]);
+  const [undoStack, setUndoStack] = useState([]);
+
+  function captureUndoState() {
+    return cloneCanvasState({
+      walls,
+      rooms,
+      doors,
+      windows,
+      furniture,
+    });
+  }
+
+  function pushUndoSnapshot() {
+    const snapshot = captureUndoState();
+
+    setUndoStack((current) => [...current, snapshot].slice(-30));
+  }
+
+  function restoreUndoState(snapshot) {
+    setWalls(snapshot.walls);
+    setRooms(snapshot.rooms);
+    setDoors(snapshot.doors);
+    setWindows(snapshot.windows);
+    setFurniture(snapshot.furniture);
+
+    setSelectedWallId(null);
+    setSelectedObject(null);
+    setSelectedRoomId(null);
+    setSelectedRoomIds([]);
+    setSelectedFurnitureId(null);
+  }
+
+  function undoLastCanvasChange() {
+    const snapshot = undoStack[undoStack.length - 1];
+
+    if (!snapshot) return;
+
+    restoreUndoState(snapshot);
+    setUndoStack((current) => current.slice(0, -1));
+  }
 
   function addWall(wall) {
+    pushUndoSnapshot();
     setWalls((current) => [...current, wall]);
   }
   function addDoor(door) {
+    pushUndoSnapshot();
     setDoors((current) => [...current, door]);
   }
   function addWindow(windowItem) {
+    pushUndoSnapshot();
     setWindows((current) => [...current, windowItem]);
   }
 
   function updateWindowPosition(id, position) {
+    pushUndoSnapshot();
     setWindows((current) =>
       current.map((windowItem) =>
         windowItem.id === id
@@ -90,6 +138,7 @@ function AppLayout() {
   }
 
   function updateDoorPosition(id, position) {
+    pushUndoSnapshot();
     setDoors((current) =>
       current.map((door) =>
         door.id === id
@@ -103,6 +152,7 @@ function AppLayout() {
   }
 
   function toggleDoorDirection(id) {
+    pushUndoSnapshot();
     setDoors((current) =>
       current.map((door) =>
         door.id === id
@@ -116,6 +166,7 @@ function AppLayout() {
   }
 
   function toggleDoorSwing(id) {
+    pushUndoSnapshot();
     setDoors((current) =>
       current.map((door) =>
         door.id === id
@@ -140,6 +191,9 @@ function AppLayout() {
   }
 
   function clearWalls() {
+    if (!walls.length) return;
+
+    pushUndoSnapshot();
     setWalls([]);
   }
 
@@ -233,6 +287,8 @@ function AppLayout() {
   function placePendingFurniture(position) {
     if (!pendingFurniture) return;
 
+    pushUndoSnapshot();
+
     const newItem = {
       id: crypto.randomUUID(),
       ...pendingFurniture,
@@ -280,6 +336,8 @@ function AppLayout() {
   }
 
   function moveFurniture(id, position) {
+    pushUndoSnapshot();
+
     setFurniture((current) => {
       const movingItem = current.find((item) => item.id === id);
 
@@ -332,6 +390,8 @@ function AppLayout() {
   }
 
   function resizeFurniture(id, size) {
+    pushUndoSnapshot();
+
     setFurniture((current) =>
       current.map((item) =>
         item.id === id
@@ -368,6 +428,8 @@ function AppLayout() {
   function deleteSelectedFurniture() {
     if (!selectedFurnitureId) return;
 
+    pushUndoSnapshot();
+
     setFurniture((current) =>
       current.filter((item) => item.id !== selectedFurnitureId),
     );
@@ -378,6 +440,8 @@ function AppLayout() {
   function deleteSelectedWall() {
     if (!selectedWallId) return;
 
+    pushUndoSnapshot();
+
     setWalls((current) => current.filter((wall) => wall.id !== selectedWallId));
 
     setSelectedWallId(null);
@@ -385,6 +449,8 @@ function AppLayout() {
 
   function deleteSelectedDoor() {
     if (selectedObject?.type !== "door") return;
+
+    pushUndoSnapshot();
 
     setDoors((current) =>
       current.filter((door) => door.id !== selectedObject.id),
@@ -396,6 +462,8 @@ function AppLayout() {
   function deleteSelectedWindow() {
     if (selectedObject?.type !== "window") return;
 
+    pushUndoSnapshot();
+
     setWindows((current) =>
       current.filter((windowItem) => windowItem.id !== selectedObject.id),
     );
@@ -404,6 +472,8 @@ function AppLayout() {
   }
 
   function updateWallPoint(id, pointName, position) {
+    pushUndoSnapshot();
+
     setWalls((current) =>
       current.map((wall) =>
         wall.id === id
@@ -417,6 +487,8 @@ function AppLayout() {
   }
 
   function moveWall(id, delta) {
+    pushUndoSnapshot();
+
     setWalls((current) =>
       current.map((wall) =>
         wall.id !== id
@@ -440,6 +512,8 @@ function AppLayout() {
     const room = rooms.find((item) => item.id === roomId);
 
     if (!room) return;
+
+    pushUndoSnapshot();
 
     // Muren
     setWalls((current) =>
@@ -514,6 +588,8 @@ function AppLayout() {
   }
 
   function updateFurnitureSize(id, size) {
+    pushUndoSnapshot();
+
     setFurniture((current) =>
       current.map((item) => (item.id === id ? { ...item, ...size } : item)),
     );
@@ -577,6 +653,8 @@ function AppLayout() {
       : null;
 
     if (!wall || !nextWalls) return;
+
+    pushUndoSnapshot();
 
     setWalls((current) =>
       current.flatMap((item) => (item.id === wallId ? nextWalls : [item])),
@@ -657,6 +735,8 @@ function AppLayout() {
       center: getRoomCenter(roomDraftWallIds),
     };
 
+    pushUndoSnapshot();
+
     setRooms((current) => [...current, room]);
     setSelectedRoomId(room.id);
     setRoomDraftWallIds([]);
@@ -705,6 +785,8 @@ function AppLayout() {
       },
     };
 
+    pushUndoSnapshot();
+
     setWalls((current) => [...current, ...newWalls]);
     setRooms((current) => [...current, room]);
 
@@ -751,6 +833,8 @@ function AppLayout() {
   function deleteSelectedRoom() {
     if (!selectedRoomIds.length && !selectedRoomId) return;
 
+    pushUndoSnapshot();
+
     const idsToDelete = selectedRoomIds.length
       ? selectedRoomIds
       : [selectedRoomId];
@@ -766,6 +850,12 @@ function AppLayout() {
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.repeat) return;
+
+      if (e.ctrlKey && e.code === "KeyZ") {
+        e.preventDefault();
+        undoLastCanvasChange();
+        return;
+      }
 
       if (e.code === "Space") {
         e.preventDefault();
@@ -842,6 +932,8 @@ function AppLayout() {
         // Daarna pas meubels
         if (!selectedFurnitureId) return;
 
+        pushUndoSnapshot();
+
         setFurniture((current) =>
           current.map((item) => {
             if (item.id !== selectedFurnitureId) return item;
@@ -877,6 +969,7 @@ function AppLayout() {
     selectedRoomId,
     selectedRoomIds,
     rooms,
+    undoStack,
   ]);
 
   return (
