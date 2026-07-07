@@ -25,6 +25,7 @@ const STORAGE_KEYS = {
   rooms: "companion-roomsketch-rooms",
   showFloorplan: "companion-roomsketch-show-floorplan",
   openings: "companion-roomsketch-openings",
+  background: "companion-roomsketch-background",
 };
 
 const SNAP_DISTANCE = 20;
@@ -376,6 +377,10 @@ function AppLayout() {
     loadFromStorage(STORAGE_KEYS.openings, []),
   );
 
+  const [background, setBackground] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.background, null),
+  );
+
   const [selectedWallId, setSelectedWallId] = useState(null);
 
   const [selectedObject, setSelectedObject] = useState(null);
@@ -407,6 +412,7 @@ function AppLayout() {
       doors,
       windows,
       openings,
+      background,
       furniture,
     });
   }
@@ -423,6 +429,7 @@ function AppLayout() {
     setDoors(snapshot.doors);
     setWindows(snapshot.windows);
     setOpenings(snapshot.openings ?? []);
+    setBackground(snapshot.background ?? null);
     setFurniture(snapshot.furniture);
 
     setSelectedWallId(null);
@@ -641,6 +648,76 @@ function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.openings, JSON.stringify(openings));
   }, [openings]);
+
+  useEffect(() => {
+    if (!background) {
+      localStorage.removeItem(STORAGE_KEYS.background);
+      return;
+    }
+
+    localStorage.setItem(STORAGE_KEYS.background, JSON.stringify(background));
+  }, [background]);
+
+  function importBackground(file) {
+    if (!file) return;
+
+    const isSvg = file.type === "image/svg+xml" || file.name.endsWith(".svg");
+    const isPng = file.type === "image/png" || file.name.endsWith(".png");
+
+    if (!isSvg && !isPng) {
+      window.alert("Kies een SVG- of PNG-bestand.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      pushUndoSnapshot();
+      setBackground({
+        visible: true,
+        locked: true,
+        opacity: 0.5,
+        scale: 1,
+        x: 30,
+        y: 30,
+        type: isSvg ? "svg" : "png",
+        source: reader.result,
+        name: file.name,
+      });
+      setSelectedObject({ type: "background", id: "background" });
+    };
+
+    reader.readAsDataURL(file);
+  }
+
+  function updateBackground(updates, options = {}) {
+    if (!background) return;
+
+    if (!options.skipUndo) {
+      pushUndoSnapshot();
+    }
+
+    setBackground((current) =>
+      current
+        ? {
+            ...current,
+            ...updates,
+          }
+        : current,
+    );
+  }
+
+  function startBackgroundMove() {
+    pushUndoSnapshot();
+  }
+
+  function removeBackground() {
+    if (!background) return;
+
+    pushUndoSnapshot();
+    setBackground(null);
+    setSelectedObject(null);
+  }
 
   useEffect(() => {
     localStorage.setItem(
@@ -1512,6 +1589,12 @@ function AppLayout() {
           return;
         }
 
+        if (selectedObject?.type === "background") {
+          e.preventDefault();
+          removeBackground();
+          return;
+        }
+
         if (selectedWallId) {
           e.preventDefault();
           deleteSelectedWall();
@@ -1607,6 +1690,11 @@ function AppLayout() {
           onToggleWallDimensions={toggleWallDimensions}
           showFloorplan={showFloorplan}
           onToggleFloorplan={toggleFloorplan}
+          background={background}
+          onImportBackground={importBackground}
+          onSelectBackground={() =>
+            setSelectedObject({ type: "background", id: "background" })
+          }
           onStartRoomDraft={startRoomDraft}
           roomDraftWallIds={roomDraftWallIds}
           onSaveRoomDraft={saveRoomDraft}
@@ -1619,6 +1707,7 @@ function AppLayout() {
           walls={walls}
           doors={doors}
           openings={openings}
+          background={background}
           addWall={addWall}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
@@ -1642,6 +1731,8 @@ function AppLayout() {
           selectedObject={selectedObject}
           onSelectObject={selectObject}
           onClearSelection={clearSelection}
+          onStartBackgroundMove={startBackgroundMove}
+          onUpdateBackground={updateBackground}
           windows={windows}
           addWindow={addWindow}
           onUpdateWindowPosition={updateWindowPosition}
@@ -1675,9 +1766,12 @@ function AppLayout() {
           selectedObject={selectedObject}
           doors={doors}
           openings={openings}
+          background={background}
           onToggleDoorDirection={toggleDoorDirection}
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}
+          onUpdateBackground={updateBackground}
+          onRemoveBackground={removeBackground}
         />
       </main>
 

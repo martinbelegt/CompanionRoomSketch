@@ -9,6 +9,7 @@ import useCanvasCamera from "./Hooks/useCanvasCamera";
 import CursorLayer from "./Layers/CursorLayer";
 import FurnitureLayer from "./Layers/FurnitureLayer";
 import FloorplanLayer from "./Layers/FloorplanLayer";
+import BackgroundLayer from "./Layers/BackgroundLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 import WallLayer from "./Layers/WallLayer";
@@ -92,6 +93,7 @@ function CanvasEngine({
   doors,
   windows,
   openings,
+  background,
   addWall,
   addDoor,
   addWindow,
@@ -115,6 +117,8 @@ function CanvasEngine({
   selectedObject,
   onSelectObject,
   onClearSelection,
+  onStartBackgroundMove,
+  onUpdateBackground,
   onUpdateWindowPosition,
   resetCanvasRequest,
   showWallDimensions,
@@ -447,6 +451,13 @@ function CanvasEngine({
       >
         <Layer>
           {showFloorplan && <FloorplanLayer />}
+          <BackgroundLayer
+            background={background}
+            selectedObject={selectedObject}
+            onSelectObject={onSelectObject}
+            onStartBackgroundMove={onStartBackgroundMove}
+            onUpdateBackground={onUpdateBackground}
+          />
 
           <WallLayer
             walls={walls}

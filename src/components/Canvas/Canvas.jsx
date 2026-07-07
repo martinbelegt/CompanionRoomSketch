@@ -8,6 +8,7 @@ function Canvas({
   doors,
   windows,
   openings,
+  background,
   addWall,
   addDoor,
   addWindow,
@@ -29,6 +30,8 @@ function Canvas({
   selectedObject,
   onSelectObject,
   onClearSelection,
+  onStartBackgroundMove,
+  onUpdateBackground,
   onStartDoorMove,
   onUpdateDoorPosition,
   onUpdateWindowPosition,
@@ -66,6 +69,7 @@ function Canvas({
           doors={doors}
           windows={windows}
           openings={openings}
+          background={background}
           addWall={addWall}
           addDoor={addDoor}
           addWindow={addWindow}
@@ -87,6 +91,8 @@ function Canvas({
           selectedObject={selectedObject}
           onSelectObject={onSelectObject}
           onClearSelection={onClearSelection}
+          onStartBackgroundMove={onStartBackgroundMove}
+          onUpdateBackground={onUpdateBackground}
           onStartDoorMove={onStartDoorMove}
           onUpdateDoorPosition={onUpdateDoorPosition}
           onUpdateWindowPosition={onUpdateWindowPosition}

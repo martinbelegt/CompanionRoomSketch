@@ -82,6 +82,9 @@ function Sidebar({
   onToggleWallDimensions,
   showFloorplan,
   onToggleFloorplan,
+  background,
+  onImportBackground,
+  onSelectBackground,
   onStartRoomDraft,
   roomDraftWallIds = [],
   onSaveRoomDraft,
@@ -226,6 +229,25 @@ function Sidebar({
         <button className="sidebar-button" onClick={onToggleFloorplan}>
           {showFloorplan ? "👁 Achtergrond verbergen" : "👁 Achtergrond tonen"}
         </button>
+
+        <label className="sidebar-button">
+          Bouwtekening importeren
+          <input
+            type="file"
+            accept="image/png,image/svg+xml"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              onImportBackground(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+
+        {background && (
+          <button className="sidebar-button" onClick={onSelectBackground}>
+            Bouwtekening bewerken
+          </button>
+        )}
 
         <button className="sidebar-button" onClick={onClearWalls}>
           🗑 Wis alle muren

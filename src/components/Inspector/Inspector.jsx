@@ -13,9 +13,12 @@ function Inspector({
   selectedObject,
   doors = [],
   openings = [],
+  background,
   onToggleDoorDirection = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
+  onUpdateBackground = () => {},
+  onRemoveBackground = () => {},
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -33,6 +36,8 @@ function Inspector({
     selectedObject?.type === "opening"
       ? openings.find((opening) => opening.id === selectedObject.id)
       : null;
+  const selectedBackground =
+    selectedObject?.type === "background" ? background : null;
 
   const hasValidCalibration =
     calibration?.mmPerPixel != null && !Number.isNaN(calibration.mmPerPixel);
@@ -89,6 +94,65 @@ function Inspector({
   return (
     <aside className="inspector">
       <h2>Eigenschappen</h2>
+
+      <section className="inspector-section">
+        <h3>Bouwtekening</h3>
+
+        {selectedBackground ? (
+          <>
+            <div className="info-row">
+              <span>Bestand</span>
+              <strong>{selectedBackground.name ?? selectedBackground.type}</strong>
+            </div>
+
+            <label className="field-label">
+              Transparantie
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round((selectedBackground.opacity ?? 0.5) * 100)}
+                onChange={(e) =>
+                  onUpdateBackground({
+                    opacity: Number(e.target.value) / 100,
+                  })
+                }
+              />
+            </label>
+
+            <label className="field-label">
+              Schaal
+              <input
+                type="number"
+                min="0.1"
+                max="10"
+                step="0.1"
+                value={selectedBackground.scale ?? 1}
+                onChange={(e) =>
+                  onUpdateBackground({
+                    scale: Math.max(0.1, Number(e.target.value) || 1),
+                  })
+                }
+              />
+            </label>
+
+            <button
+              className="primary-button"
+              onClick={() =>
+                onUpdateBackground({ locked: !selectedBackground.locked })
+              }
+            >
+              {selectedBackground.locked ? "Unlock background" : "Lock background"}
+            </button>
+
+            <button className="danger-button" onClick={onRemoveBackground}>
+              Remove background
+            </button>
+          </>
+        ) : (
+          <p className="muted">Importeer of selecteer een bouwtekening.</p>
+        )}
+      </section>
 
       <section className="inspector-section">
         <h3>📏 Afstand meten</h3>
