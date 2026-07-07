@@ -19,6 +19,7 @@ function Inspector({
   rooms = [],
   selectedRoomId,
   selectedRoomIds = [],
+  onUpdateRectangleRoomSize = () => {},
   onToggleDoorDirection = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
@@ -30,11 +31,12 @@ function Inspector({
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
   const [depthCm, setDepthCm] = useState("");
+  const [roomLengthMm, setRoomLengthMm] = useState("");
+  const [roomWidthMm, setRoomWidthMm] = useState("");
 
   const selectedFurniture = furniture.find(
     (item) => item.id === selectedFurnitureId,
   );
-
   const selectedDoor =
     selectedObject?.type === "door"
       ? doors.find((door) => door.id === selectedObject.id)
@@ -54,25 +56,33 @@ function Inspector({
     selectedRoomIdsForReference.length === 1
       ? rooms.find((room) => room.id === selectedRoomIdsForReference[0])
       : null;
-
-  const hasValidCalibration =
-    calibration?.mmPerPixel != null && !Number.isNaN(calibration.mmPerPixel);
-
-  const measuredMm =
-    hasValidCalibration && measurement.pixelDistance
-      ? measurement.pixelDistance * calibration.mmPerPixel
+  const selectedRoom =
+    selectedRoomIdsForReference.length === 1
+      ? rooms.find((room) => room.id === selectedRoomIdsForReference[0])
       : null;
-
-  const expectedMm = Number(realDistanceMm.replace(",", "."));
-  const hasExpectedMm = expectedMm > 0 && !Number.isNaN(expectedMm);
-
-  const differenceMm =
-    measuredMm != null && hasExpectedMm ? measuredMm - expectedMm : null;
-
-  const differencePercent =
-    differenceMm != null && hasExpectedMm
-      ? Math.abs(differenceMm / expectedMm) * 100
+  const roomMmPerPixel = calibration?.mmPerPixel ?? 10;
+  const selectedRoomLengthMm =
+    selectedRoom?.bounds?.width != null
+      ? Math.round(selectedRoom.bounds.width * roomMmPerPixel)
       : null;
+  const selectedRoomWidthMm =
+    selectedRoom?.bounds?.height != null
+      ? Math.round(selectedRoom.bounds.height * roomMmPerPixel)
+      : null;
+  const selectedRoomAreaM2 =
+    selectedRoomLengthMm != null && selectedRoomWidthMm != null
+      ? (selectedRoomLengthMm * selectedRoomWidthMm) / 1_000_000
+      : null;
+  const selectedRoomVolumeM3 =
+    selectedRoomAreaM2 != null ? selectedRoomAreaM2 * 2.64 : null;
+
+  const enteredDistance = Number(realDistanceMm.replace(",", "."));
+  const hasRealDistance =
+    Number.isFinite(enteredDistance) && enteredDistance > 0;
+  const measuredDistanceText =
+    measurement.pixelDistance && calibration?.mmPerPixel
+      ? `${Math.round(measurement.pixelDistance * calibration.mmPerPixel)} mm`
+      : "Nog geen meting";
 
   useEffect(() => {
     if (!selectedFurniture) {
@@ -85,9 +95,20 @@ function Inspector({
     setDepthCm(String(Math.round(selectedFurniture.depthMm / 10)));
   }, [selectedFurniture]);
 
-  function handleCalibrate() {
-    if (!hasExpectedMm) return;
-    onCalibrate(expectedMm);
+  useEffect(() => {
+    if (!selectedRoom?.bounds) {
+      setRoomLengthMm("");
+      setRoomWidthMm("");
+      return;
+    }
+
+    setRoomLengthMm(String(selectedRoomLengthMm));
+    setRoomWidthMm(String(selectedRoomWidthMm));
+  }, [selectedRoom?.id, selectedRoomLengthMm, selectedRoomWidthMm, selectedRoom]);
+
+  function handleUseAsScale() {
+    if (!hasRealDistance) return;
+    onCalibrate(enteredDistance);
   }
 
   function handleSaveFurnitureSize() {
@@ -99,12 +120,28 @@ function Inspector({
     });
   }
 
-  function getScaleCheckText() {
-    if (differencePercent == null) return "";
+  function formatDecimal(value) {
+    return value.toFixed(1).replace(".", ",");
+  }
 
-    if (differencePercent <= 1) return "🟢 Uitstekend";
-    if (differencePercent <= 3) return "🟠 Bruikbaar";
-    return "🔴 Controleer opnieuw";
+  function updateSelectedRoomSize(nextValues) {
+    if (!selectedRoom?.bounds) return;
+
+    const nextLengthMm = Number(
+      String(nextValues.lengthMm ?? roomLengthMm).replace(",", "."),
+    );
+    const nextWidthMm = Number(
+      String(nextValues.widthMm ?? roomWidthMm).replace(",", "."),
+    );
+
+    if (!Number.isFinite(nextLengthMm) || !Number.isFinite(nextWidthMm)) {
+      return;
+    }
+
+    onUpdateRectangleRoomSize(selectedRoom.id, {
+      lengthMm: nextLengthMm,
+      widthMm: nextWidthMm,
+    });
   }
 
   return (
@@ -136,27 +173,11 @@ function Inspector({
               />
             </label>
 
-            <label className="field-label">
-              Schaal
-              <input
-                type="number"
-                min="0.1"
-                max="10"
-                step="0.1"
-                value={selectedBackground.scale ?? 1}
-                onChange={(e) =>
-                  onUpdateBackground({
-                    scale: Math.max(0.1, Number(e.target.value) || 1),
-                  })
-                }
-              />
-            </label>
-
             <button
               className="primary-button"
               onClick={onStartBackgroundCalibration}
             >
-              Kalibreren
+              Op maat zetten
             </button>
 
             {backgroundCalibrationActive && (
@@ -169,11 +190,13 @@ function Inspector({
                 onUpdateBackground({ locked: !selectedBackground.locked })
               }
             >
-              {selectedBackground.locked ? "Unlock background" : "Lock background"}
+              {selectedBackground.locked
+                ? "Ontgrendel bouwtekening"
+                : "Bouwtekening vastzetten"}
             </button>
 
             <button className="danger-button" onClick={onRemoveBackground}>
-              Remove background
+              Bouwtekening verwijderen
             </button>
           </>
         ) : background && selectedReferenceRoom?.bounds ? (
@@ -198,95 +221,100 @@ function Inspector({
           </>
         ) : background ? (
           <p className="muted">
-            Selecteer een room om de bouwtekening daarop uit te lijnen.
+            Selecteer de bouwtekening of een room om verder uit te lijnen.
           </p>
         ) : (
-          <p className="muted">Importeer of selecteer een bouwtekening.</p>
+          <p className="muted">Importeer eerst een bouwtekening.</p>
         )}
       </section>
 
-      <section className="inspector-section">
-        <h3>📏 Afstand meten</h3>
+      {selectedRoom?.bounds && (
+        <section className="inspector-section">
+          <h3>Geselecteerde ruimte</h3>
 
-        <div className="info-row">
-          <span>Gemeten afstand</span>
-          <strong>
-            {measurement.pixelDistance
-              ? `${Math.round(measurement.pixelDistance)} px`
-              : "Nog geen meting"}
-          </strong>
-        </div>
+          <div className="info-row">
+            <span>Naam</span>
+            <strong>{selectedRoom.name}</strong>
+          </div>
+
+          <label className="field-label">
+            Lengte
+            <input
+              inputMode="numeric"
+              value={roomLengthMm}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setRoomLengthMm(nextValue);
+                updateSelectedRoomSize({ lengthMm: nextValue });
+              }}
+              placeholder="bijv. 7555 mm"
+            />
+          </label>
+
+          <label className="field-label">
+            Breedte
+            <input
+              inputMode="numeric"
+              value={roomWidthMm}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setRoomWidthMm(nextValue);
+                updateSelectedRoomSize({ widthMm: nextValue });
+              }}
+              placeholder="bijv. 4074 mm"
+            />
+          </label>
+
+          {selectedRoomAreaM2 != null && selectedRoomVolumeM3 != null && (
+            <>
+              <div className="info-row">
+                <span>Oppervlakte</span>
+                <strong>{formatDecimal(selectedRoomAreaM2)} m²</strong>
+              </div>
+
+              <div className="info-row">
+                <span>Inhoud</span>
+                <strong>{formatDecimal(selectedRoomVolumeM3)} m³</strong>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      <section className="inspector-section">
+        <h3>Afstand meten</h3>
+
+        {!measurement.pixelDistance ? (
+          <p className="muted">
+            Meet eerst een bekende afstand op de bouwtekening.
+          </p>
+        ) : (
+          <div className="info-row">
+            <span>Gemeten afstand</span>
+            <strong>{measuredDistanceText}</strong>
+          </div>
+        )}
 
         <label className="field-label">
-          Hoe lang is dit in het echt? (mm)
+          Werkelijke lengte
           <input
             value={realDistanceMm}
             onChange={(e) => setRealDistanceMm(e.target.value)}
-            placeholder="bijv. 7555"
+            placeholder="bijv. 4074 mm"
           />
         </label>
 
         <button
           className="primary-button"
-          onClick={handleCalibrate}
-          disabled={!measurement.pixelDistance || !hasExpectedMm}
+          onClick={handleUseAsScale}
+          disabled={!measurement.pixelDistance || !hasRealDistance}
         >
-          Gebruik als schaal
+          Zet bouwtekening op maat
         </button>
       </section>
 
       <section className="inspector-section">
-        <h3>📐 Schaalcontrole</h3>
-
-        {hasValidCalibration ? (
-          <>
-            <p className="muted">De plattegrond staat op schaal.</p>
-
-            <div className="info-row">
-              <span>Schaal</span>
-              <strong>{calibration.mmPerPixel.toFixed(3)} mm/px</strong>
-            </div>
-
-            {measuredMm != null &&
-            hasExpectedMm &&
-            differencePercent != null ? (
-              <>
-                <div className="info-row">
-                  <span>Volgens huidige schaal</span>
-                  <strong>{Math.round(measuredMm)} mm</strong>
-                </div>
-
-                <div className="info-row">
-                  <span>Verwachte maat</span>
-                  <strong>{Math.round(expectedMm)} mm</strong>
-                </div>
-
-                <div className="info-row">
-                  <span>Verschil</span>
-                  <strong>
-                    {Math.round(differenceMm)} mm /{" "}
-                    {differencePercent.toFixed(2)}%
-                  </strong>
-                </div>
-
-                <p className="muted">{getScaleCheckText()}</p>
-              </>
-            ) : (
-              <p className="muted">
-                Meet een tweede bekende afstand en vul de echte maat in om te
-                controleren.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="muted">
-            Meet eerst een bekende afstand en klik op Gebruik als schaal.
-          </p>
-        )}
-      </section>
-
-      <section className="inspector-section">
-        <h3>🛋️ Geselecteerd meubel</h3>
+        <h3>Geselecteerd meubel</h3>
 
         {selectedFurniture ? (
           <>
@@ -326,8 +354,9 @@ function Inspector({
           <p className="muted">Klik op een meubel om het te selecteren.</p>
         )}
       </section>
+
       <section className="inspector-section">
-        <h3>🚪 Geselecteerde deur</h3>
+        <h3>Geselecteerde deur</h3>
 
         {selectedDoor ? (
           <>

@@ -192,6 +192,48 @@ function pointInRect(point, rect) {
   );
 }
 
+function getPointAtWallRatio(oldWall, newWall, position) {
+  if (!oldWall || !newWall || !position) return position;
+
+  const oldDx = oldWall.endPoint.x - oldWall.startPoint.x;
+  const oldDy = oldWall.endPoint.y - oldWall.startPoint.y;
+  const oldLengthSq = oldDx * oldDx + oldDy * oldDy;
+
+  if (!oldLengthSq) return newWall.startPoint;
+
+  const ratio =
+    ((position.x - oldWall.startPoint.x) * oldDx +
+      (position.y - oldWall.startPoint.y) * oldDy) /
+    oldLengthSq;
+  const clampedRatio = Math.min(1, Math.max(0, ratio));
+
+  return {
+    x:
+      newWall.startPoint.x +
+      (newWall.endPoint.x - newWall.startPoint.x) * clampedRatio,
+    y:
+      newWall.startPoint.y +
+      (newWall.endPoint.y - newWall.startPoint.y) * clampedRatio,
+  };
+}
+
+function getRectangleWallUpdates(room, widthPx, heightPx) {
+  if (!room?.bounds || room.wallIds?.length !== 4) return null;
+
+  const { x, y } = room.bounds;
+  const topLeft = { x, y };
+  const topRight = { x: x + widthPx, y };
+  const bottomRight = { x: x + widthPx, y: y + heightPx };
+  const bottomLeft = { x, y: y + heightPx };
+
+  return new Map([
+    [room.wallIds[0], { startPoint: topLeft, endPoint: topRight }],
+    [room.wallIds[1], { startPoint: topRight, endPoint: bottomRight }],
+    [room.wallIds[2], { startPoint: bottomRight, endPoint: bottomLeft }],
+    [room.wallIds[3], { startPoint: bottomLeft, endPoint: topLeft }],
+  ]);
+}
+
 function rectMatchesMarquee(rect, marqueeBounds) {
   const area = rect.width * rect.height;
   const intersectionArea = getRectIntersectionArea(rect, marqueeBounds);
@@ -1548,6 +1590,123 @@ function AppLayout() {
     setRectangleRoomDialogOpen(false);
   }
 
+  function updateRectangleRoomSize(roomId, sizeMm) {
+    const room = rooms.find((item) => item.id === roomId);
+
+    if (!room?.bounds || room.wallIds?.length !== 4) return;
+
+    const lengthMm = Number(sizeMm.lengthMm);
+    const widthMm = Number(sizeMm.widthMm);
+
+    if (!Number.isFinite(lengthMm) || !Number.isFinite(widthMm)) return;
+    if (lengthMm <= 0 || widthMm <= 0) return;
+
+    const mmPerPixel = calibration?.mmPerPixel ?? 10;
+    const nextWidthPx = lengthMm / mmPerPixel;
+    const nextHeightPx = widthMm / mmPerPixel;
+    const nextWallUpdates = getRectangleWallUpdates(
+      room,
+      nextWidthPx,
+      nextHeightPx,
+    );
+
+    if (!nextWallUpdates) return;
+
+    const oldWallsById = new Map(
+      walls
+        .filter((wall) => room.wallIds.includes(wall.id))
+        .map((wall) => [wall.id, wall]),
+    );
+    const nextWallsById = new Map(
+      room.wallIds.map((wallId) => [
+        wallId,
+        {
+          id: wallId,
+          ...nextWallUpdates.get(wallId),
+        },
+      ]),
+    );
+
+    pushUndoSnapshot();
+
+    setWalls((current) =>
+      current.map((wall) =>
+        nextWallUpdates.has(wall.id)
+          ? {
+              ...wall,
+              ...nextWallUpdates.get(wall.id),
+            }
+          : wall,
+      ),
+    );
+
+    setRooms((current) =>
+      current.map((item) =>
+        item.id === roomId
+          ? {
+              ...item,
+              center: {
+                x: item.bounds.x + nextWidthPx / 2,
+                y: item.bounds.y + nextHeightPx / 2,
+              },
+              bounds: {
+                ...item.bounds,
+                width: nextWidthPx,
+                height: nextHeightPx,
+              },
+            }
+          : item,
+      ),
+    );
+
+    setDoors((current) =>
+      current.map((door) => {
+        if (!room.wallIds.includes(door.wallId)) return door;
+
+        return {
+          ...door,
+          position: getPointAtWallRatio(
+            oldWallsById.get(door.wallId),
+            nextWallsById.get(door.wallId),
+            door.position,
+          ),
+        };
+      }),
+    );
+
+    setWindows((current) =>
+      current.map((windowItem) => {
+        if (!room.wallIds.includes(windowItem.wallId)) return windowItem;
+
+        return {
+          ...windowItem,
+          position: getPointAtWallRatio(
+            oldWallsById.get(windowItem.wallId),
+            nextWallsById.get(windowItem.wallId),
+            windowItem.position,
+          ),
+        };
+      }),
+    );
+
+    setOpenings((current) =>
+      current.map((opening) => {
+        const wallId = opening.wallIds?.find((id) => room.wallIds.includes(id));
+
+        if (!wallId) return opening;
+
+        return {
+          ...opening,
+          position: getPointAtWallRatio(
+            oldWallsById.get(wallId),
+            nextWallsById.get(wallId),
+            opening.position,
+          ),
+        };
+      }),
+    );
+  }
+
   function selectRoom(id, addToSelection = false) {
     setSelectedWallId(null);
     setSelectedObject(null);
@@ -1877,6 +2036,7 @@ function AppLayout() {
           rooms={rooms}
           selectedRoomId={selectedRoomId}
           selectedRoomIds={selectedRoomIds}
+          onUpdateRectangleRoomSize={updateRectangleRoomSize}
           onToggleDoorDirection={toggleDoorDirection}
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}

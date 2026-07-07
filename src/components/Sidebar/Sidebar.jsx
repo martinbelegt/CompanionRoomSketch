@@ -227,7 +227,9 @@ function Sidebar({
         </button>
 
         <button className="sidebar-button" onClick={onToggleFloorplan}>
-          {showFloorplan ? "👁 Achtergrond verbergen" : "👁 Achtergrond tonen"}
+          {showFloorplan
+            ? "Bouwtekening verbergen"
+            : "Bouwtekening tonen"}
         </button>
 
         <label className="sidebar-button">
