@@ -20,6 +20,7 @@ function Inspector({
   selectedRoomId,
   selectedRoomIds = [],
   onUpdateRectangleRoomSize = () => {},
+  onSetRoomLocked = () => {},
   onToggleDoorDirection = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
@@ -236,6 +237,15 @@ function Inspector({
             <span>Naam</span>
             <strong>{selectedRoom.name}</strong>
           </div>
+
+          <button
+            className="primary-button"
+            onClick={() => onSetRoomLocked(selectedRoom.id, !selectedRoom.locked)}
+          >
+            {selectedRoom.locked
+              ? "Ruimte ontgrendelen"
+              : "Ruimte vergrendelen"}
+          </button>
 
           <label className="field-label">
             Lengte

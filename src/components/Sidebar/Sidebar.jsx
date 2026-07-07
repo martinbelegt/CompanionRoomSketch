@@ -86,6 +86,7 @@ function Sidebar({
   onImportBackground,
   onSelectBackground,
   onStartRoomDraft,
+  onUnlockAllRooms,
   roomDraftWallIds = [],
   onSaveRoomDraft,
   onStartOpening,
@@ -224,6 +225,10 @@ function Sidebar({
 
         <button className="sidebar-button" onClick={onToggleWallDimensions}>
           {showWallDimensions ? "📐 Maten verbergen" : "📐 Maten tonen"}
+        </button>
+
+        <button className="sidebar-button" onClick={onUnlockAllRooms}>
+          Alle ruimtes ontgrendelen
         </button>
 
         <button className="sidebar-button" onClick={onToggleFloorplan}>

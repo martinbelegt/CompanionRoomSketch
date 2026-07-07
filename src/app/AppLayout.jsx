@@ -318,7 +318,12 @@ function getObjectsInMarquee({
   calibration,
 }) {
   const roomIds = rooms
-    .filter((room) => room.bounds && rectMatchesMarquee(room.bounds, marqueeBounds))
+    .filter(
+      (room) =>
+        !room.locked &&
+        room.bounds &&
+        rectMatchesMarquee(room.bounds, marqueeBounds),
+    )
     .map((room) => room.id);
   const roomWallIds = new Set(
     rooms
@@ -1721,6 +1726,10 @@ function AppLayout() {
   }
 
   function selectRoom(id, addToSelection = false) {
+    const room = rooms.find((item) => item.id === id);
+
+    if (room?.locked) return;
+
     setSelectedWallId(null);
     setSelectedObject(null);
     setBulkSelection(EMPTY_BULK_SELECTION);
@@ -1743,7 +1752,9 @@ function AppLayout() {
   }
 
   function selectRoomByWallId(wallId) {
-    const room = rooms.find((item) => item.wallIds.includes(wallId));
+    const room = rooms.find(
+      (item) => !item.locked && item.wallIds.includes(wallId),
+    );
 
     if (!room) {
       setSelectedRoomId(null);
@@ -1767,6 +1778,48 @@ function AppLayout() {
       ...EMPTY_BULK_SELECTION,
       roomIds: idsToDelete,
     });
+  }
+
+  function setRoomLocked(roomId, locked) {
+    const room = rooms.find((item) => item.id === roomId);
+
+    if (!room || Boolean(room.locked) === locked) return;
+
+    pushUndoSnapshot();
+    setRooms((current) =>
+      current.map((item) =>
+        item.id === roomId
+          ? {
+              ...item,
+              locked,
+            }
+          : item,
+      ),
+    );
+
+    if (locked) {
+      setSelectedRoomId(null);
+      setSelectedRoomIds([]);
+    } else {
+      setSelectedRoomId(roomId);
+      setSelectedRoomIds([roomId]);
+    }
+  }
+
+  function unlockAllRooms() {
+    if (!rooms.some((room) => room.locked)) return;
+
+    pushUndoSnapshot();
+    setRooms((current) =>
+      current.map((room) =>
+        room.locked
+          ? {
+              ...room,
+              locked: false,
+            }
+          : room,
+      ),
+    );
   }
 
   function selectObjectsInMarquee(marqueeBounds) {
@@ -1980,6 +2033,7 @@ function AppLayout() {
             setSelectedObject({ type: "background", id: "background" })
           }
           onStartRoomDraft={startRoomDraft}
+          onUnlockAllRooms={unlockAllRooms}
           roomDraftWallIds={roomDraftWallIds}
           onSaveRoomDraft={saveRoomDraft}
           onCreate={createRectangleRoom}
@@ -2061,6 +2115,7 @@ function AppLayout() {
           selectedRoomId={selectedRoomId}
           selectedRoomIds={selectedRoomIds}
           onUpdateRectangleRoomSize={updateRectangleRoomSize}
+          onSetRoomLocked={setRoomLocked}
           onToggleDoorDirection={toggleDoorDirection}
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}
