@@ -42,6 +42,8 @@ function Canvas({
   onSelectRoomByWallId,
   onSelectRoom,
   onMoveRoom,
+  activeSnapGuides,
+  onClearSnapGuides,
   onToggleDoorDirection,
   onToggleDoorSwing,
   onSelectOpeningWall,
@@ -95,6 +97,8 @@ function Canvas({
           onSelectRoomByWallId={onSelectRoomByWallId}
           onSelectRoom={onSelectRoom}
           onMoveRoom={onMoveRoom}
+          activeSnapGuides={activeSnapGuides}
+          onClearSnapGuides={onClearSnapGuides}
           onToggleDoorDirection={onToggleDoorDirection}
           onToggleDoorSwing={onToggleDoorSwing}
           onSelectOpeningWall={onSelectOpeningWall}

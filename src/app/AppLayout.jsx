@@ -41,8 +41,16 @@ function rangesOverlap(startA, endA, startB, endB) {
 }
 
 function getSnappedRoomPosition({ room, proposedBounds, rooms, snapDistance }) {
+  const fallback = {
+    x: proposedBounds?.x ?? 0,
+    y: proposedBounds?.y ?? 0,
+    snapped: false,
+    axis: null,
+    snapLines: [],
+  };
+
   if (!room?.bounds || !proposedBounds) {
-    return { x: proposedBounds?.x ?? 0, y: proposedBounds?.y ?? 0 };
+    return fallback;
   }
 
   const proposedRight = proposedBounds.x + proposedBounds.width;
@@ -67,18 +75,34 @@ function getSnappedRoomPosition({ room, proposedBounds, rooms, snapDistance }) {
       )
     ) {
       const xCandidates = [
-        otherBounds.x - proposedRight,
-        otherRight - proposedBounds.x,
+        {
+          offset: otherBounds.x - proposedRight,
+          line: {
+            orientation: "vertical",
+            x: otherBounds.x,
+            y1: Math.min(proposedBounds.y, otherBounds.y),
+            y2: Math.max(proposedBottom, otherBottom),
+          },
+        },
+        {
+          offset: otherRight - proposedBounds.x,
+          line: {
+            orientation: "vertical",
+            x: otherRight,
+            y1: Math.min(proposedBounds.y, otherBounds.y),
+            y2: Math.max(proposedBottom, otherBottom),
+          },
+        },
       ];
 
-      for (const offset of xCandidates) {
+      for (const { offset, line } of xCandidates) {
         const distance = Math.abs(offset);
 
         if (
           distance <= snapDistance &&
           (!snapX || distance < snapX.distance)
         ) {
-          snapX = { offset, distance };
+          snapX = { offset, distance, line };
         }
       }
     }
@@ -92,26 +116,49 @@ function getSnappedRoomPosition({ room, proposedBounds, rooms, snapDistance }) {
       )
     ) {
       const yCandidates = [
-        otherBounds.y - proposedBottom,
-        otherBottom - proposedBounds.y,
+        {
+          offset: otherBounds.y - proposedBottom,
+          line: {
+            orientation: "horizontal",
+            y: otherBounds.y,
+            x1: Math.min(proposedBounds.x, otherBounds.x),
+            x2: Math.max(proposedBounds.x + proposedBounds.width, otherRight),
+          },
+        },
+        {
+          offset: otherBottom - proposedBounds.y,
+          line: {
+            orientation: "horizontal",
+            y: otherBottom,
+            x1: Math.min(proposedBounds.x, otherBounds.x),
+            x2: Math.max(proposedBounds.x + proposedBounds.width, otherRight),
+          },
+        },
       ];
 
-      for (const offset of yCandidates) {
+      for (const { offset, line } of yCandidates) {
         const distance = Math.abs(offset);
 
         if (
           distance <= snapDistance &&
           (!snapY || distance < snapY.distance)
         ) {
-          snapY = { offset, distance };
+          snapY = { offset, distance, line };
         }
       }
     }
   }
 
+  const snapLines = [snapX?.line, snapY?.line].filter(Boolean);
+  const axis =
+    snapX && snapY ? "both" : snapX ? "x" : snapY ? "y" : null;
+
   return {
     x: proposedBounds.x + (snapX?.offset ?? 0),
     y: proposedBounds.y + (snapY?.offset ?? 0),
+    snapped: Boolean(axis),
+    axis,
+    snapLines,
   };
 }
 
@@ -151,6 +198,7 @@ function AppLayout() {
 
   const [roomDraftWallIds, setRoomDraftWallIds] = useState([]);
   const [undoStack, setUndoStack] = useState([]);
+  const [activeSnapGuides, setActiveSnapGuides] = useState([]);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -269,6 +317,7 @@ function AppLayout() {
     setSelectedWallId(null);
     setSelectedRoomId(null);
     setSelectedRoomIds([]);
+    setActiveSnapGuides([]);
   }
 
   function clearWalls() {
@@ -592,9 +641,10 @@ function AppLayout() {
   function moveRoom(roomId, delta, options = {}) {
     const room = rooms.find((item) => item.id === roomId);
 
-    if (!room) return;
+    if (!room) return null;
 
     let moveDelta = delta;
+    let snapResult = null;
 
     if (options.snap && room.bounds) {
       const proposedBounds = {
@@ -602,20 +652,24 @@ function AppLayout() {
         x: room.bounds.x + delta.x,
         y: room.bounds.y + delta.y,
       };
-      const snappedPosition = getSnappedRoomPosition({
+      snapResult = getSnappedRoomPosition({
         room,
         proposedBounds,
         rooms,
         snapDistance: SNAP_DISTANCE,
       });
 
+      setActiveSnapGuides(snapResult.snapLines);
+
       moveDelta = {
-        x: snappedPosition.x - room.bounds.x,
-        y: snappedPosition.y - room.bounds.y,
+        x: snapResult.x - room.bounds.x,
+        y: snapResult.y - room.bounds.y,
       };
+    } else if (!options.snap) {
+      setActiveSnapGuides([]);
     }
 
-    if (moveDelta.x === 0 && moveDelta.y === 0) return;
+    if (moveDelta.x === 0 && moveDelta.y === 0) return snapResult;
 
     pushUndoSnapshot();
 
@@ -687,8 +741,10 @@ function AppLayout() {
                 : item.bounds,
             }
           : item,
-      ),
+        ),
     );
+
+    return snapResult;
   }
 
   function updateFurnitureSize(id, size) {
@@ -1140,6 +1196,8 @@ function AppLayout() {
           onSelectRoomByWallId={selectRoomByWallId}
           onSelectRoom={selectRoom}
           onMoveRoom={moveRoom}
+          activeSnapGuides={activeSnapGuides}
+          onClearSnapGuides={() => setActiveSnapGuides([])}
           onToggleDoorDirection={toggleDoorDirection}
           onToggleDoorSwing={toggleDoorSwing}
           selectedRoomIds={selectedRoomIds}

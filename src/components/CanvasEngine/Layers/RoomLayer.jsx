@@ -7,6 +7,7 @@ function RoomLayer({
   onSelectRoom,
   onMoveRoom,
   currentTool,
+  onClearSnapGuides,
 }) {
   const isOpeningMode = currentTool === "opening";
 
@@ -36,6 +37,7 @@ function RoomLayer({
           onDragStart={(e) => {
             e.cancelBubble = true;
             onSelectRoom(room.id);
+            onClearSnapGuides?.();
           }}
           onDragMove={(e) => {
             e.cancelBubble = true;
@@ -56,6 +58,7 @@ function RoomLayer({
           }}
           onDragEnd={(e) => {
             e.cancelBubble = true;
+            onClearSnapGuides?.();
 
             e.target.position({
               x: room.center?.x ?? 0,
