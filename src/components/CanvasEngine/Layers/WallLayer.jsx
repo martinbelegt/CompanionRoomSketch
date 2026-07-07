@@ -6,7 +6,6 @@ const WALL_WIDTH = 6;
 
 function WallLayer({
   walls = [],
-  doors = [],
   selectedWallId,
   onWallClick,
   onWallMouseDown,
@@ -45,7 +44,7 @@ function WallLayer({
               draggable={wall.id === selectedWallId}
               onClick={(e) => {
                 e.cancelBubble = true;
-                onWallClick(wall);
+                onWallClick(wall, e);
               }}
               onMouseDown={(e) => {
                 e.cancelBubble = true;

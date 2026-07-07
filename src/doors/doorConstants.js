@@ -1,2 +1,3 @@
-export const DEFAULT_DOOR_WIDTH_MM = 900;
+export const DEFAULT_DOOR_WIDTH_MM = 830;
+export const DEFAULT_DOOR_OPENING_WIDTH_MM = 880;
 export const DEFAULT_DOOR_THICKNESS_PX = 8;

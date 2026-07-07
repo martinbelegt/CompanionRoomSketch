@@ -352,7 +352,7 @@ function CanvasEngine({
     setIsMarqueeDragging(false);
   }
 
-  function handleWallClick(wall) {
+  function handleWallClick(wall, event) {
     if (currentTool === "opening") {
       onSelectOpeningWall(wall.id);
       return;
@@ -363,7 +363,15 @@ function CanvasEngine({
       return;
     }
     if (currentTool === "door") {
-      addDoor(createDoor(wall.id, getWallCenter(wall)));
+      const stage = event?.target?.getStage();
+      const clickPosition = stage ? getWorldPointer(stage) : getWallCenter(wall);
+
+      addDoor(
+        createDoor(wall, clickPosition, {
+          calibration,
+          rooms,
+        }),
+      );
 
       onSelectTool("select");
       return;
@@ -425,7 +433,6 @@ function CanvasEngine({
 
           <WallLayer
             walls={walls}
-            doors={doors}
             selectedWallId={selectedWallId}
             onWallClick={handleWallClick}
             onWallMouseDown={handleWallMouseDown}
