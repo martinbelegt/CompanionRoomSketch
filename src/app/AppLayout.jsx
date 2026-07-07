@@ -234,6 +234,19 @@ function getRectangleWallUpdates(room, widthPx, heightPx) {
   ]);
 }
 
+function isTextEditingTarget(target) {
+  if (!target) return false;
+
+  const tagName = target.tagName?.toLowerCase();
+
+  return (
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select" ||
+    target.isContentEditable
+  );
+}
+
 function rectMatchesMarquee(rect, marqueeBounds) {
   const area = rect.width * rect.height;
   const intersectionArea = getRectIntersectionArea(rect, marqueeBounds);
@@ -1778,6 +1791,7 @@ function AppLayout() {
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.repeat) return;
+      const isEditingText = isTextEditingTarget(e.target);
 
       if (e.ctrlKey && e.code === "KeyZ") {
         e.preventDefault();
@@ -1821,6 +1835,13 @@ function AppLayout() {
         setActiveTool("select");
         setTemporaryTool(null);
 
+        return;
+      }
+
+      if (
+        (e.code === "Delete" || e.code === "Backspace") &&
+        isEditingText
+      ) {
         return;
       }
 
@@ -1870,7 +1891,10 @@ function AppLayout() {
       }
 
       if (
-        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(
+          e.code,
+        ) &&
+        !isEditingText
       ) {
         e.preventDefault();
 
