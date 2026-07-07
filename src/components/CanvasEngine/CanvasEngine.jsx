@@ -93,6 +93,7 @@ function CanvasEngine({
   addWall,
   addDoor,
   addWindow,
+  onStartDoorMove,
   onUpdateDoorPosition,
   selectedFurnitureId,
   onSelectFurniture,
@@ -125,6 +126,7 @@ function CanvasEngine({
   onSelectRoomByWallId,
   onSelectRoom,
   onMoveRoom,
+  onMarqueeSelect,
   activeSnapGuides,
   onClearSnapGuides,
   onToggleDoorDirection,
@@ -349,6 +351,19 @@ function CanvasEngine({
   function handleStageMouseUp() {
     if (!isMarqueeDragging) return;
 
+    if (marqueeStart && marqueeEnd) {
+      const marqueeBounds = {
+        x: Math.min(marqueeStart.x, marqueeEnd.x),
+        y: Math.min(marqueeStart.y, marqueeEnd.y),
+        width: Math.abs(marqueeEnd.x - marqueeStart.x),
+        height: Math.abs(marqueeEnd.y - marqueeStart.y),
+      };
+
+      if (marqueeBounds.width > 3 && marqueeBounds.height > 3) {
+        onMarqueeSelect?.(marqueeBounds);
+      }
+    }
+
     setIsMarqueeDragging(false);
   }
 
@@ -445,6 +460,7 @@ function CanvasEngine({
           />
           <RoomLayer
             rooms={rooms}
+            calibration={calibration}
             selectedRoomId={selectedRoomId}
             selectedRoomIds={selectedRoomIds}
             onSelectRoom={onSelectRoom}
@@ -460,6 +476,7 @@ function CanvasEngine({
             calibration={calibration}
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
+            onStartDoorMove={onStartDoorMove}
             onUpdateDoorPosition={onUpdateDoorPosition}
             onToggleDoorDirection={onToggleDoorDirection}
             onToggleDoorSwing={onToggleDoorSwing}

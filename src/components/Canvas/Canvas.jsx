@@ -28,6 +28,7 @@ function Canvas({
   selectedObject,
   onSelectObject,
   onClearSelection,
+  onStartDoorMove,
   onUpdateDoorPosition,
   onUpdateWindowPosition,
   resetCanvasRequest,
@@ -42,6 +43,7 @@ function Canvas({
   onSelectRoomByWallId,
   onSelectRoom,
   onMoveRoom,
+  onMarqueeSelect,
   activeSnapGuides,
   onClearSnapGuides,
   onToggleDoorDirection,
@@ -83,6 +85,7 @@ function Canvas({
           selectedObject={selectedObject}
           onSelectObject={onSelectObject}
           onClearSelection={onClearSelection}
+          onStartDoorMove={onStartDoorMove}
           onUpdateDoorPosition={onUpdateDoorPosition}
           onUpdateWindowPosition={onUpdateWindowPosition}
           resetCanvasRequest={resetCanvasRequest}
@@ -97,6 +100,7 @@ function Canvas({
           onSelectRoomByWallId={onSelectRoomByWallId}
           onSelectRoom={onSelectRoom}
           onMoveRoom={onMoveRoom}
+          onMarqueeSelect={onMarqueeSelect}
           activeSnapGuides={activeSnapGuides}
           onClearSnapGuides={onClearSnapGuides}
           onToggleDoorDirection={onToggleDoorDirection}

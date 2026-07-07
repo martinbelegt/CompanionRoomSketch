@@ -50,7 +50,7 @@ function normalizeVector(vector, fallback) {
   };
 }
 
-function projectPointToWall(point, wall) {
+function projectPointToWall(point, wall, edgePadding = 0) {
   const direction = getWallDirection(wall);
 
   const vx = point.x - wall.startPoint.x;
@@ -63,7 +63,11 @@ function projectPointToWall(point, wall) {
     ) || 1;
 
   const distanceAlongWall = vx * direction.x + vy * direction.y;
-  const clampedDistance = Math.max(0, Math.min(wallLength, distanceAlongWall));
+  const padding = Math.min(edgePadding, wallLength / 2);
+  const clampedDistance = Math.max(
+    padding,
+    Math.min(wallLength - padding, distanceAlongWall),
+  );
 
   return {
     x: wall.startPoint.x + direction.x * clampedDistance,
@@ -102,6 +106,7 @@ function DoorLayer({
   calibration,
   selectedObject,
   onSelectObject,
+  onStartDoorMove,
   onUpdateDoorPosition,
   onToggleDoorDirection,
   onToggleDoorSwing,
@@ -174,6 +179,10 @@ function DoorLayer({
             x: hinge.x + openVector.x,
             y: hinge.y + openVector.y,
           };
+          const rebateEnd = {
+            x: hinge.x + closedVector.x,
+            y: hinge.y + closedVector.y,
+          };
           const arcPoints = getCompactArcPoints(
             closedVector,
             openVector,
@@ -194,6 +203,10 @@ function DoorLayer({
                 e.cancelBubble = true;
                 onSelectObject("door", door.id);
               }}
+              onDragStart={(e) => {
+                e.cancelBubble = true;
+                onStartDoorMove?.();
+              }}
               onDragMove={(e) => {
                 e.cancelBubble = true;
 
@@ -203,13 +216,25 @@ function DoorLayer({
                     y: e.target.y(),
                   },
                   wall,
+                  halfOpeningWidthPx,
                 );
 
                 e.target.position(projectedPosition);
-                onUpdateDoorPosition(door.id, projectedPosition);
+                onUpdateDoorPosition(door.id, projectedPosition, {
+                  skipUndo: true,
+                });
               }}
               onDragEnd={(e) => {
                 e.cancelBubble = true;
+              }}
+              onDblClick={(e) => {
+                e.cancelBubble = true;
+
+                if (e.evt.shiftKey) {
+                  onToggleDoorSwing(door.id);
+                } else {
+                  onToggleDoorDirection(door.id);
+                }
               }}
             >
               <Line
@@ -238,6 +263,14 @@ function DoorLayer({
                   listening={false}
                 />
               ))}
+
+              <Line
+                points={[hinge.x, hinge.y, rebateEnd.x, rebateEnd.y]}
+                stroke={color}
+                strokeWidth={1.5}
+                lineCap="square"
+                listening={false}
+              />
 
               <Line
                 points={[hinge.x, hinge.y, doorEnd.x, doorEnd.y]}
@@ -327,6 +360,10 @@ function DoorLayer({
               e.cancelBubble = true;
               onSelectObject("door", door.id);
             }}
+            onDragStart={(e) => {
+              e.cancelBubble = true;
+              onStartDoorMove?.();
+            }}
             onDragMove={(e) => {
               e.cancelBubble = true;
 
@@ -336,10 +373,13 @@ function DoorLayer({
                   y: e.target.y(),
                 },
                 wall,
+                halfDoorWidthPx,
               );
 
               e.target.position(projectedPosition);
-              onUpdateDoorPosition(door.id, projectedPosition);
+              onUpdateDoorPosition(door.id, projectedPosition, {
+                skipUndo: true,
+              });
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;

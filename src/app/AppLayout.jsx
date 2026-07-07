@@ -23,9 +23,17 @@ const STORAGE_KEYS = {
   doors: "companion-roomsketch-doors",
   windows: "companion-roomsketch-windows",
   rooms: "companion-roomsketch-rooms",
+  showFloorplan: "companion-roomsketch-show-floorplan",
 };
 
 const SNAP_DISTANCE = 20;
+const EMPTY_BULK_SELECTION = {
+  roomIds: [],
+  wallIds: [],
+  doorIds: [],
+  windowIds: [],
+  furnitureIds: [],
+};
 
 function loadFromStorage(key, fallback) {
   const saved = localStorage.getItem(key);
@@ -162,6 +170,149 @@ function getSnappedRoomPosition({ room, proposedBounds, rooms, snapDistance }) {
   };
 }
 
+function getRectIntersectionArea(rectA, rectB) {
+  const left = Math.max(rectA.x, rectB.x);
+  const right = Math.min(rectA.x + rectA.width, rectB.x + rectB.width);
+  const top = Math.max(rectA.y, rectB.y);
+  const bottom = Math.min(rectA.y + rectA.height, rectB.y + rectB.height);
+
+  if (right <= left || bottom <= top) return 0;
+
+  return (right - left) * (bottom - top);
+}
+
+function pointInRect(point, rect) {
+  return (
+    point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height
+  );
+}
+
+function rectMatchesMarquee(rect, marqueeBounds) {
+  const area = rect.width * rect.height;
+  const intersectionArea = getRectIntersectionArea(rect, marqueeBounds);
+  const center = {
+    x: rect.x + rect.width / 2,
+    y: rect.y + rect.height / 2,
+  };
+
+  return (
+    intersectionArea > 0 &&
+    (intersectionArea >= area * 0.45 || pointInRect(center, marqueeBounds))
+  );
+}
+
+function getLineSide(point, start, end) {
+  return (
+    (point.x - start.x) * (end.y - start.y) -
+    (point.y - start.y) * (end.x - start.x)
+  );
+}
+
+function lineSegmentsIntersect(startA, endA, startB, endB) {
+  const sideA = getLineSide(startA, startB, endB);
+  const sideB = getLineSide(endA, startB, endB);
+  const sideC = getLineSide(startB, startA, endA);
+  const sideD = getLineSide(endB, startA, endA);
+
+  return sideA * sideB <= 0 && sideC * sideD <= 0;
+}
+
+function lineIntersectsRect(startPoint, endPoint, rect) {
+  if (pointInRect(startPoint, rect) || pointInRect(endPoint, rect)) return true;
+
+  const rectPoints = [
+    { x: rect.x, y: rect.y },
+    { x: rect.x + rect.width, y: rect.y },
+    { x: rect.x + rect.width, y: rect.y + rect.height },
+    { x: rect.x, y: rect.y + rect.height },
+  ];
+
+  return rectPoints.some((point, index) =>
+    lineSegmentsIntersect(
+      startPoint,
+      endPoint,
+      point,
+      rectPoints[(index + 1) % rectPoints.length],
+    ),
+  );
+}
+
+function getFurnitureBounds(item, calibration) {
+  const mmPerPixel = calibration?.mmPerPixel ?? 10;
+
+  return {
+    x: item.x,
+    y: item.y,
+    width: item.widthMm / mmPerPixel,
+    height: item.depthMm / mmPerPixel,
+  };
+}
+
+function getObjectsInMarquee({
+  marqueeBounds,
+  rooms,
+  walls,
+  doors,
+  windows,
+  furniture,
+  calibration,
+}) {
+  const roomIds = rooms
+    .filter((room) => room.bounds && rectMatchesMarquee(room.bounds, marqueeBounds))
+    .map((room) => room.id);
+  const roomWallIds = new Set(
+    rooms
+      .filter((room) => roomIds.includes(room.id))
+      .flatMap((room) => room.wallIds ?? []),
+  );
+  const wallToRoomId = new Map(
+    rooms.flatMap((room) =>
+      (room.wallIds ?? []).map((wallId) => [wallId, room.id]),
+    ),
+  );
+
+  const wallIds = walls
+    .filter((wall) => {
+      const roomId = wallToRoomId.get(wall.id);
+
+      if (roomId && !roomIds.includes(roomId)) return false;
+      if (roomWallIds.has(wall.id)) return false;
+
+      return lineIntersectsRect(wall.startPoint, wall.endPoint, marqueeBounds);
+    })
+    .map((wall) => wall.id);
+
+  const doorIds = doors
+    .filter((door) => door.position && pointInRect(door.position, marqueeBounds))
+    .map((door) => door.id);
+  const windowIds = windows
+    .filter(
+      (windowItem) =>
+        windowItem.position && pointInRect(windowItem.position, marqueeBounds),
+    )
+    .map((windowItem) => windowItem.id);
+  const furnitureIds = furniture
+    .filter((item) =>
+      rectMatchesMarquee(getFurnitureBounds(item, calibration), marqueeBounds),
+    )
+    .map((item) => item.id);
+
+  return {
+    roomIds,
+    wallIds,
+    doorIds,
+    windowIds,
+    furnitureIds,
+  };
+}
+
+function hasBulkSelection(selection) {
+  return Object.values(selection).some((ids) => ids.length > 0);
+}
+
 function AppLayout() {
   const [furniture, setFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.furniture, []),
@@ -184,7 +335,9 @@ function AppLayout() {
   const [selectedObject, setSelectedObject] = useState(null);
 
   const [showWallDimensions, setShowWallDimensions] = useState(true);
-  const [showFloorplan, setShowFloorplan] = useState(true);
+  const [showFloorplan, setShowFloorplan] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.showFloorplan, true),
+  );
 
   const [resetCanvasRequest, setResetCanvasRequest] = useState(0);
 
@@ -199,6 +352,7 @@ function AppLayout() {
   const [roomDraftWallIds, setRoomDraftWallIds] = useState([]);
   const [undoStack, setUndoStack] = useState([]);
   const [activeSnapGuides, setActiveSnapGuides] = useState([]);
+  const [bulkSelection, setBulkSelection] = useState(EMPTY_BULK_SELECTION);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -228,6 +382,7 @@ function AppLayout() {
     setSelectedRoomId(null);
     setSelectedRoomIds([]);
     setSelectedFurnitureId(null);
+    setBulkSelection(EMPTY_BULK_SELECTION);
   }
 
   function undoLastCanvasChange() {
@@ -266,8 +421,11 @@ function AppLayout() {
     );
   }
 
-  function updateDoorPosition(id, position) {
-    pushUndoSnapshot();
+  function updateDoorPosition(id, position, options = {}) {
+    if (!options.skipUndo) {
+      pushUndoSnapshot();
+    }
+
     setDoors((current) =>
       current.map((door) =>
         door.id === id
@@ -280,6 +438,10 @@ function AppLayout() {
     );
   }
 
+  function startDoorMove() {
+    pushUndoSnapshot();
+  }
+
   function toggleDoorDirection(id) {
     pushUndoSnapshot();
     setDoors((current) =>
@@ -287,6 +449,12 @@ function AppLayout() {
         door.id === id
           ? {
               ...door,
+              openDirection: door.openDirection
+                ? {
+                    x: -door.openDirection.x,
+                    y: -door.openDirection.y,
+                  }
+                : door.openDirection,
               direction: door.direction === "inside" ? "outside" : "inside",
             }
           : door,
@@ -301,6 +469,12 @@ function AppLayout() {
         door.id === id
           ? {
               ...door,
+              hingeSide:
+                door.hingeSide === "start"
+                  ? "end"
+                  : door.hingeSide === "end"
+                    ? "start"
+                    : door.hingeSide,
               swing: door.swing === "left" ? "right" : "left",
             }
           : door,
@@ -309,7 +483,13 @@ function AppLayout() {
   }
 
   function selectObject(type, id) {
+    setBulkSelection(EMPTY_BULK_SELECTION);
     setSelectedObject({ type, id });
+  }
+
+  function selectFurniture(id) {
+    setBulkSelection(EMPTY_BULK_SELECTION);
+    setSelectedFurnitureId(id);
   }
 
   function clearSelection() {
@@ -317,6 +497,8 @@ function AppLayout() {
     setSelectedWallId(null);
     setSelectedRoomId(null);
     setSelectedRoomIds([]);
+    setSelectedFurnitureId(null);
+    setBulkSelection(EMPTY_BULK_SELECTION);
     setActiveSnapGuides([]);
   }
 
@@ -392,6 +574,13 @@ function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.rooms, JSON.stringify(rooms));
   }, [rooms]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEYS.showFloorplan,
+      JSON.stringify(showFloorplan),
+    );
+  }, [showFloorplan]);
 
   function addFurniture(catalogId) {
     const template =
@@ -555,50 +744,106 @@ function AppLayout() {
     );
   }
 
-  function deleteSelectedFurniture() {
-    if (!selectedFurnitureId) return;
+  function deleteSelectedObjects(selection, options = {}) {
+    if (!hasBulkSelection(selection)) return;
+
+    const selectedRoomIds = new Set(selection.roomIds);
+    const roomWallIds = new Set(
+      rooms
+        .filter((room) => selectedRoomIds.has(room.id))
+        .flatMap((room) => room.wallIds ?? []),
+    );
+    const roomProtectedWallIds = new Set(
+      rooms
+        .filter((room) => !selectedRoomIds.has(room.id))
+        .flatMap((room) => room.wallIds ?? []),
+    );
+    const looseWallIds = new Set(
+      selection.wallIds.filter(
+        (wallId) => options.allowRoomWallDelete || !roomProtectedWallIds.has(wallId),
+      ),
+    );
+    const wallIdsToDelete = new Set([...roomWallIds, ...looseWallIds]);
+    const doorIdsToDelete = new Set(selection.doorIds);
+    const windowIdsToDelete = new Set(selection.windowIds);
+    const roomFurnitureIds = new Set(
+      furniture
+        .filter((item) => item.roomId && selectedRoomIds.has(item.roomId))
+        .map((item) => item.id),
+    );
+    const furnitureIdsToDelete = new Set([
+      ...selection.furnitureIds,
+      ...roomFurnitureIds,
+    ]);
+
+    doors.forEach((door) => {
+      if (wallIdsToDelete.has(door.wallId)) {
+        doorIdsToDelete.add(door.id);
+      }
+    });
+    windows.forEach((windowItem) => {
+      if (wallIdsToDelete.has(windowItem.wallId)) {
+        windowIdsToDelete.add(windowItem.id);
+      }
+    });
 
     pushUndoSnapshot();
 
+    setRooms((current) =>
+      current.filter((room) => !selectedRoomIds.has(room.id)),
+    );
+    setWalls((current) =>
+      current.filter((wall) => !wallIdsToDelete.has(wall.id)),
+    );
+    setDoors((current) =>
+      current.filter((door) => !doorIdsToDelete.has(door.id)),
+    );
+    setWindows((current) =>
+      current.filter((windowItem) => !windowIdsToDelete.has(windowItem.id)),
+    );
     setFurniture((current) =>
-      current.filter((item) => item.id !== selectedFurnitureId),
+      current.filter((item) => !furnitureIdsToDelete.has(item.id)),
     );
 
-    setSelectedFurnitureId(null);
-    setSelectedObject(null);
+    clearSelection();
+  }
+
+  function deleteSelectedFurniture() {
+    if (!selectedFurnitureId) return;
+
+    deleteSelectedObjects({
+      ...EMPTY_BULK_SELECTION,
+      furnitureIds: [selectedFurnitureId],
+    });
   }
   function deleteSelectedWall() {
     if (!selectedWallId) return;
 
-    pushUndoSnapshot();
-
-    setWalls((current) => current.filter((wall) => wall.id !== selectedWallId));
-
-    setSelectedWallId(null);
+    deleteSelectedObjects(
+      {
+        ...EMPTY_BULK_SELECTION,
+        wallIds: [selectedWallId],
+      },
+      { allowRoomWallDelete: true },
+    );
   }
 
   function deleteSelectedDoor() {
     if (selectedObject?.type !== "door") return;
 
-    pushUndoSnapshot();
-
-    setDoors((current) =>
-      current.filter((door) => door.id !== selectedObject.id),
-    );
-
-    setSelectedObject(null);
+    deleteSelectedObjects({
+      ...EMPTY_BULK_SELECTION,
+      doorIds: [selectedObject.id],
+    });
   }
 
   function deleteSelectedWindow() {
     if (selectedObject?.type !== "window") return;
 
-    pushUndoSnapshot();
-
-    setWindows((current) =>
-      current.filter((windowItem) => windowItem.id !== selectedObject.id),
-    );
-
-    setSelectedObject(null);
+    deleteSelectedObjects({
+      ...EMPTY_BULK_SELECTION,
+      windowIds: [selectedObject.id],
+    });
   }
 
   function updateWallPoint(id, pointName, position) {
@@ -959,6 +1204,7 @@ function AppLayout() {
   function selectRoom(id, addToSelection = false) {
     setSelectedWallId(null);
     setSelectedObject(null);
+    setBulkSelection(EMPTY_BULK_SELECTION);
 
     if (addToSelection) {
       setSelectedRoomIds((current) => {
@@ -987,24 +1233,40 @@ function AppLayout() {
 
     setSelectedRoomId(room.id);
     setSelectedRoomIds([room.id]);
+    setBulkSelection(EMPTY_BULK_SELECTION);
     return true;
   }
 
   function deleteSelectedRoom() {
     if (!selectedRoomIds.length && !selectedRoomId) return;
 
-    pushUndoSnapshot();
-
     const idsToDelete = selectedRoomIds.length
       ? selectedRoomIds
       : [selectedRoomId];
 
-    setRooms((current) =>
-      current.filter((room) => !idsToDelete.includes(room.id)),
-    );
+    deleteSelectedObjects({
+      ...EMPTY_BULK_SELECTION,
+      roomIds: idsToDelete,
+    });
+  }
 
-    setSelectedRoomId(null);
-    setSelectedRoomIds([]);
+  function selectObjectsInMarquee(marqueeBounds) {
+    const selection = getObjectsInMarquee({
+      marqueeBounds,
+      rooms,
+      walls,
+      doors,
+      windows,
+      furniture,
+      calibration,
+    });
+
+    setBulkSelection(selection);
+    setSelectedRoomIds(selection.roomIds);
+    setSelectedRoomId(selection.roomIds[0] ?? null);
+    setSelectedWallId(selection.wallIds[0] ?? null);
+    setSelectedFurnitureId(selection.furnitureIds[0] ?? null);
+    setSelectedObject(null);
   }
 
   useEffect(() => {
@@ -1023,6 +1285,18 @@ function AppLayout() {
         return;
       }
 
+      if (
+        selectedObject?.type === "door" &&
+        e.code === "KeyR" &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        e.preventDefault();
+        toggleDoorDirection(selectedObject.id);
+        return;
+      }
+
       if (e.code === "Escape") {
         e.preventDefault();
 
@@ -1035,34 +1309,46 @@ function AppLayout() {
         });
 
         setSelectedFurnitureId(null);
+        setBulkSelection(EMPTY_BULK_SELECTION);
         setActiveTool("select");
         setTemporaryTool(null);
 
         return;
       }
 
-      if (selectedObject?.type === "window") {
-        deleteSelectedWindow();
-        return;
-      }
+      if (e.code === "Delete" || e.code === "Backspace") {
+        if (hasBulkSelection(bulkSelection)) {
+          e.preventDefault();
+          deleteSelectedObjects(bulkSelection);
+          return;
+        }
 
-      if (e.code === "Delete") {
         if (selectedRoomId) {
+          e.preventDefault();
           deleteSelectedRoom();
           return;
         }
 
         if (selectedObject?.type === "door") {
+          e.preventDefault();
           deleteSelectedDoor();
           return;
         }
 
+        if (selectedObject?.type === "window") {
+          e.preventDefault();
+          deleteSelectedWindow();
+          return;
+        }
+
         if (selectedWallId) {
+          e.preventDefault();
           deleteSelectedWall();
           return;
         }
 
         if (selectedFurnitureId) {
+          e.preventDefault();
           deleteSelectedFurniture();
         }
 
@@ -1163,9 +1449,10 @@ function AppLayout() {
           doors={doors}
           addWall={addWall}
           addDoor={addDoor}
+          onStartDoorMove={startDoorMove}
           onUpdateDoorPosition={updateDoorPosition}
           selectedFurnitureId={selectedFurnitureId}
-          onSelectFurniture={setSelectedFurnitureId}
+          onSelectFurniture={selectFurniture}
           onMoveFurniture={moveFurniture}
           measurement={measurement}
           onMeasurementChange={setMeasurement}
@@ -1196,6 +1483,7 @@ function AppLayout() {
           onSelectRoomByWallId={selectRoomByWallId}
           onSelectRoom={selectRoom}
           onMoveRoom={moveRoom}
+          onMarqueeSelect={selectObjectsInMarquee}
           activeSnapGuides={activeSnapGuides}
           onClearSnapGuides={() => setActiveSnapGuides([])}
           onToggleDoorDirection={toggleDoorDirection}
@@ -1212,6 +1500,9 @@ function AppLayout() {
           furniture={furniture}
           onUpdateFurnitureSize={updateFurnitureSize}
           onDeleteSelectedFurniture={deleteSelectedFurniture}
+          selectedObject={selectedObject}
+          doors={doors}
+          onToggleDoorDirection={toggleDoorDirection}
         />
       </main>
 

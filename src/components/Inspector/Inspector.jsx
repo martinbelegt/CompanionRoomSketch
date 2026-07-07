@@ -11,8 +11,8 @@ function Inspector({
   onUpdateFurnitureSize,
   onDeleteSelectedFurniture,
   selectedObject,
-  doors,
-  onUpdateDoor,
+  doors = [],
+  onToggleDoorDirection = () => {},
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -26,17 +26,6 @@ function Inspector({
     selectedObject?.type === "door"
       ? doors.find((door) => door.id === selectedObject.id)
       : null;
-
-  useEffect(() => {
-    if (!selectedDoor) {
-      setDoorWidth("");
-      return;
-    }
-
-    setDoorWidth(String(selectedDoor.widthMm));
-  }, [selectedDoor]);
-
-  const [doorWidth, setDoorWidth] = useState("");
 
   const hasValidCalibration =
     calibration?.mmPerPixel != null && !Number.isNaN(calibration.mmPerPixel);
@@ -220,23 +209,16 @@ function Inspector({
 
         {selectedDoor ? (
           <>
-            <label className="field-label">
-              Breedte (mm)
-              <input
-                value={doorWidth}
-                onChange={(e) => setDoorWidth(e.target.value)}
-              />
-            </label>
+            <div className="info-row">
+              <span>Deurblad</span>
+              <strong>{selectedDoor.doorWidthMm ?? selectedDoor.widthMm} mm</strong>
+            </div>
 
             <button
               className="primary-button"
-              onClick={() =>
-                onUpdateDoor(selectedDoor.id, {
-                  widthMm: Number(doorWidth),
-                })
-              }
+              onClick={() => onToggleDoorDirection(selectedDoor.id)}
             >
-              Breedte toepassen
+              Draairichting wisselen
             </button>
           </>
         ) : (
