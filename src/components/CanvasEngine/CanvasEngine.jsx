@@ -33,6 +33,7 @@ import { createWindow } from "../../windows/windowUtils";
 
 import RoomLayer from "./Layers/RoomLayer";
 import RoomSnapGuideLayer from "./Layers/RoomSnapGuideLayer";
+import OpeningLayer from "./Layers/OpeningLayer";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -90,6 +91,7 @@ function CanvasEngine({
   walls,
   doors,
   windows,
+  openings,
   addWall,
   addDoor,
   addWindow,
@@ -473,6 +475,7 @@ function CanvasEngine({
           <DoorLayer
             doors={doors}
             walls={walls}
+            openings={openings}
             calibration={calibration}
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
@@ -480,6 +483,13 @@ function CanvasEngine({
             onUpdateDoorPosition={onUpdateDoorPosition}
             onToggleDoorDirection={onToggleDoorDirection}
             onToggleDoorSwing={onToggleDoorSwing}
+          />
+          <OpeningLayer
+            openings={openings}
+            walls={walls}
+            calibration={calibration}
+            selectedObject={selectedObject}
+            onSelectObject={onSelectObject}
           />
           <WindowLayer
             windows={windows}

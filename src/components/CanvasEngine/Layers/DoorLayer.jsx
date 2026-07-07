@@ -103,6 +103,7 @@ function getCompactArcPoints(startVector, endVector, radius) {
 function DoorLayer({
   doors = [],
   walls = [],
+  openings = [],
   calibration,
   selectedObject,
   onSelectObject,
@@ -116,7 +117,17 @@ function DoorLayer({
   return (
     <>
       {doors.map((door) => {
-        const wall = walls.find((item) => item.id === door.wallId);
+        const opening = door.openingId
+          ? openings.find((item) => item.id === door.openingId)
+          : null;
+        const wall =
+          opening?.startPoint && opening?.endPoint
+            ? {
+                id: door.wallId,
+                startPoint: opening.startPoint,
+                endPoint: opening.endPoint,
+              }
+            : walls.find((item) => item.id === door.wallId);
         if (!wall) return null;
 
         const center = door.position ?? getWallCenter(wall);

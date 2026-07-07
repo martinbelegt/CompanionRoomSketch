@@ -12,7 +12,10 @@ function Inspector({
   onDeleteSelectedFurniture,
   selectedObject,
   doors = [],
+  openings = [],
   onToggleDoorDirection = () => {},
+  onConvertOpeningToDoor = () => {},
+  onConvertDoorToOpening = () => {},
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -25,6 +28,10 @@ function Inspector({
   const selectedDoor =
     selectedObject?.type === "door"
       ? doors.find((door) => door.id === selectedObject.id)
+      : null;
+  const selectedOpening =
+    selectedObject?.type === "opening"
+      ? openings.find((opening) => opening.id === selectedObject.id)
       : null;
 
   const hasValidCalibration =
@@ -220,9 +227,32 @@ function Inspector({
             >
               Draairichting wisselen
             </button>
+
+            {selectedDoor.openingId && (
+              <button
+                className="primary-button"
+                onClick={() => onConvertDoorToOpening(selectedDoor.id)}
+              >
+                Terug naar open doorgang
+              </button>
+            )}
+          </>
+        ) : selectedOpening ? (
+          <>
+            <div className="info-row">
+              <span>Opening</span>
+              <strong>{selectedOpening.widthMm} mm</strong>
+            </div>
+
+            <button
+              className="primary-button"
+              onClick={() => onConvertOpeningToDoor(selectedOpening.id)}
+            >
+              Omzetten naar draaideur
+            </button>
           </>
         ) : (
-          <p className="muted">Klik op een deur.</p>
+          <p className="muted">Klik op een deur of open doorgang.</p>
         )}
       </section>
     </aside>

@@ -7,6 +7,7 @@ function Canvas({
   walls,
   doors,
   windows,
+  openings,
   addWall,
   addDoor,
   addWindow,
@@ -64,6 +65,7 @@ function Canvas({
           walls={walls}
           doors={doors}
           windows={windows}
+          openings={openings}
           addWall={addWall}
           addDoor={addDoor}
           addWindow={addWindow}

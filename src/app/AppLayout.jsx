@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   windows: "companion-roomsketch-windows",
   rooms: "companion-roomsketch-rooms",
   showFloorplan: "companion-roomsketch-show-floorplan",
+  openings: "companion-roomsketch-openings",
 };
 
 const SNAP_DISTANCE = 20;
@@ -313,6 +314,47 @@ function hasBulkSelection(selection) {
   return Object.values(selection).some((ids) => ids.length > 0);
 }
 
+function getWallDirection(wall) {
+  const dx = wall.endPoint.x - wall.startPoint.x;
+  const dy = wall.endPoint.y - wall.startPoint.y;
+  const length = Math.sqrt(dx * dx + dy * dy) || 1;
+
+  return {
+    x: dx / length,
+    y: dy / length,
+  };
+}
+
+function getWallNormal(wall) {
+  const direction = getWallDirection(wall);
+
+  return {
+    x: -direction.y,
+    y: direction.x,
+  };
+}
+
+function getOpeningFillDirection(wall, opening, rooms) {
+  const normal = getWallNormal(wall);
+  const room = rooms.find((item) => item.wallIds?.includes(wall.id));
+
+  if (!room?.center) return normal;
+
+  const toRoomCenter = {
+    x: room.center.x - opening.position.x,
+    y: room.center.y - opening.position.y,
+  };
+  const pointsTowardRoom =
+    toRoomCenter.x * normal.x + toRoomCenter.y * normal.y >= 0;
+
+  return pointsTowardRoom
+    ? normal
+    : {
+        x: -normal.x,
+        y: -normal.y,
+      };
+}
+
 function AppLayout() {
   const [furniture, setFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.furniture, []),
@@ -328,6 +370,10 @@ function AppLayout() {
 
   const [windows, setWindows] = useState(() =>
     loadFromStorage(STORAGE_KEYS.windows, []),
+  );
+
+  const [openings, setOpenings] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.openings, []),
   );
 
   const [selectedWallId, setSelectedWallId] = useState(null);
@@ -360,6 +406,7 @@ function AppLayout() {
       rooms,
       doors,
       windows,
+      openings,
       furniture,
     });
   }
@@ -375,6 +422,7 @@ function AppLayout() {
     setRooms(snapshot.rooms);
     setDoors(snapshot.doors);
     setWindows(snapshot.windows);
+    setOpenings(snapshot.openings ?? []);
     setFurniture(snapshot.furniture);
 
     setSelectedWallId(null);
@@ -426,6 +474,8 @@ function AppLayout() {
       pushUndoSnapshot();
     }
 
+    const movingDoor = doors.find((door) => door.id === id);
+
     setDoors((current) =>
       current.map((door) =>
         door.id === id
@@ -433,9 +483,22 @@ function AppLayout() {
               ...door,
               position,
             }
-          : door,
+        : door,
       ),
     );
+
+    if (movingDoor?.openingId) {
+      setOpenings((current) =>
+        current.map((opening) =>
+          opening.id === movingDoor.openingId
+            ? {
+                ...opening,
+                position,
+              }
+            : opening,
+        ),
+      );
+    }
   }
 
   function startDoorMove() {
@@ -574,6 +637,10 @@ function AppLayout() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.rooms, JSON.stringify(rooms));
   }, [rooms]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.openings, JSON.stringify(openings));
+  }, [openings]);
 
   useEffect(() => {
     localStorage.setItem(
@@ -786,6 +853,13 @@ function AppLayout() {
         windowIdsToDelete.add(windowItem.id);
       }
     });
+    const openingIdsToDelete = new Set(
+      openings
+        .filter((opening) =>
+          opening.wallIds?.some((wallId) => wallIdsToDelete.has(wallId)),
+        )
+        .map((opening) => opening.id),
+    );
 
     pushUndoSnapshot();
 
@@ -800,6 +874,9 @@ function AppLayout() {
     );
     setWindows((current) =>
       current.filter((windowItem) => !windowIdsToDelete.has(windowItem.id)),
+    );
+    setOpenings((current) =>
+      current.filter((opening) => !openingIdsToDelete.has(opening.id)),
     );
     setFurniture((current) =>
       current.filter((item) => !furnitureIdsToDelete.has(item.id)),
@@ -967,6 +1044,20 @@ function AppLayout() {
       ),
     );
 
+    setOpenings((current) =>
+      current.map((opening) =>
+        opening.wallIds?.some((wallId) => room.wallIds.includes(wallId))
+          ? {
+              ...opening,
+              position: {
+                x: opening.position.x + moveDelta.x,
+                y: opening.position.y + moveDelta.y,
+              },
+            }
+          : opening,
+      ),
+    );
+
     // Middelpunt van de ruimte
     setRooms((current) =>
       current.map((item) =>
@@ -1045,19 +1136,35 @@ function AppLayout() {
       };
     }
 
-    return [
-      createWall(wall.startPoint, pointAt(openingStart)),
-      createWall(pointAt(openingEnd), wall.endPoint),
-    ];
+    return {
+      walls: [
+        createWall(wall.startPoint, pointAt(openingStart)),
+        createWall(pointAt(openingEnd), wall.endPoint),
+      ],
+      position: pointAt(wallLength / 2),
+      widthMm: Number(widthMm),
+    };
   }
 
   function createOpeningInWall(wallId) {
     const wall = walls.find((item) => item.id === wallId);
-    const nextWalls = wall
+    const openingDraft = wall
       ? splitWallForOpening(wall, pendingOpening?.widthMm)
       : null;
 
-    if (!wall || !nextWalls) return;
+    if (!wall || !openingDraft) return;
+
+    const nextWalls = openingDraft.walls;
+    const opening = {
+      id: crypto.randomUUID(),
+      wallIds: nextWalls.map((item) => item.id),
+      startPoint: wall.startPoint,
+      endPoint: wall.endPoint,
+      position: openingDraft.position,
+      widthMm: openingDraft.widthMm,
+      fill: "open",
+      doorId: null,
+    };
 
     pushUndoSnapshot();
 
@@ -1078,6 +1185,8 @@ function AppLayout() {
       ),
     );
 
+    setOpenings((current) => [...current, opening]);
+
     setPendingOpening(null);
     setSelectedWallId(null);
     setSelectedObject(null);
@@ -1096,6 +1205,68 @@ function AppLayout() {
     }));
     setSelectedWallId(wallId);
     setSelectedObject({ type: "wall", id: wallId });
+  }
+
+  function convertOpeningToDoor(openingId) {
+    const opening = openings.find((item) => item.id === openingId);
+
+    if (!opening || opening.fill === "door") return;
+
+    const wall = walls.find((item) => opening.wallIds?.includes(item.id));
+
+    if (!wall) return;
+
+    const door = {
+      id: crypto.randomUUID(),
+      wallId: wall.id,
+      openingId: opening.id,
+      position: opening.position,
+      widthMm: opening.widthMm,
+      doorWidthMm: opening.widthMm,
+      sparingWidthMm: opening.widthMm,
+      hingeSide: "start",
+      openDirection: getOpeningFillDirection(wall, opening, rooms),
+      direction: "inside",
+      swing: "right",
+    };
+
+    pushUndoSnapshot();
+
+    setDoors((current) => [...current, door]);
+    setOpenings((current) =>
+      current.map((item) =>
+        item.id === openingId
+          ? {
+              ...item,
+              fill: "door",
+              doorId: door.id,
+            }
+          : item,
+      ),
+    );
+    setSelectedObject({ type: "door", id: door.id });
+  }
+
+  function convertDoorToOpening(doorId) {
+    const door = doors.find((item) => item.id === doorId);
+
+    if (!door?.openingId) return;
+
+    pushUndoSnapshot();
+
+    setDoors((current) => current.filter((item) => item.id !== doorId));
+    setOpenings((current) =>
+      current.map((opening) =>
+        opening.id === door.openingId
+          ? {
+              ...opening,
+              fill: "open",
+              doorId: null,
+            }
+          : opening,
+      ),
+    );
+    setSelectedObject({ type: "opening", id: door.openingId });
   }
 
   function toggleRoomDraftWall(wallId) {
@@ -1447,6 +1618,7 @@ function AppLayout() {
           furniture={furniture}
           walls={walls}
           doors={doors}
+          openings={openings}
           addWall={addWall}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
@@ -1502,7 +1674,10 @@ function AppLayout() {
           onDeleteSelectedFurniture={deleteSelectedFurniture}
           selectedObject={selectedObject}
           doors={doors}
+          openings={openings}
           onToggleDoorDirection={toggleDoorDirection}
+          onConvertOpeningToDoor={convertOpeningToDoor}
+          onConvertDoorToOpening={convertDoorToOpening}
         />
       </main>
 
