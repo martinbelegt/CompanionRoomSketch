@@ -14,11 +14,13 @@ function Inspector({
   doors = [],
   openings = [],
   background,
+  backgroundCalibrationActive,
   onToggleDoorDirection = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
   onUpdateBackground = () => {},
   onRemoveBackground = () => {},
+  onStartBackgroundCalibration = () => {},
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -135,6 +137,17 @@ function Inspector({
                 }
               />
             </label>
+
+            <button
+              className="primary-button"
+              onClick={onStartBackgroundCalibration}
+            >
+              Kalibreren
+            </button>
+
+            {backgroundCalibrationActive && (
+              <p className="muted">Klik twee punten op de bouwtekening.</p>
+            )}
 
             <button
               className="primary-button"

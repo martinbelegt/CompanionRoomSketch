@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import "./CanvasEngine.css";
 
-import { Stage, Layer, Rect } from "react-konva";
+import { Circle, Line, Stage, Layer, Rect } from "react-konva";
 import useCanvasSize from "../../hooks/useCanvasSize";
 import useCanvasCamera from "./Hooks/useCanvasCamera";
 
@@ -94,6 +94,7 @@ function CanvasEngine({
   windows,
   openings,
   background,
+  backgroundCalibrationActive,
   addWall,
   addDoor,
   addWindow,
@@ -119,6 +120,7 @@ function CanvasEngine({
   onClearSelection,
   onStartBackgroundMove,
   onUpdateBackground,
+  onFinishBackgroundCalibration,
   onUpdateWindowPosition,
   resetCanvasRequest,
   showWallDimensions,
@@ -150,6 +152,8 @@ function CanvasEngine({
   const [marqueeStart, setMarqueeStart] = useState(null);
   const [marqueeEnd, setMarqueeEnd] = useState(null);
   const [isMarqueeDragging, setIsMarqueeDragging] = useState(false);
+  const [backgroundCalibrationPoints, setBackgroundCalibrationPoints] =
+    useState([]);
 
   const [wallStartPoint, setWallStartPoint] = useState(null);
   useEffect(() => {
@@ -162,6 +166,12 @@ function CanvasEngine({
     if (!resetCanvasRequest) return;
     resetCamera();
   }, [resetCanvasRequest, resetCamera]);
+
+  useEffect(() => {
+    if (!backgroundCalibrationActive) {
+      setBackgroundCalibrationPoints([]);
+    }
+  }, [backgroundCalibrationActive]);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -215,6 +225,21 @@ function CanvasEngine({
     const rawPointer = getWorldPointer(stage);
 
     if (!rawPointer) return;
+
+    if (backgroundCalibrationActive) {
+      const nextPoints = [...backgroundCalibrationPoints, rawPointer].slice(
+        0,
+        2,
+      );
+
+      setBackgroundCalibrationPoints(nextPoints);
+
+      if (nextPoints.length === 2) {
+        onFinishBackgroundCalibration?.(nextPoints);
+      }
+
+      return;
+    }
 
     if (currentTool === "select" && e.target === stage) {
       setMarqueeStart(rawPointer);
@@ -453,11 +478,42 @@ function CanvasEngine({
           {showFloorplan && <FloorplanLayer />}
           <BackgroundLayer
             background={background}
+            backgroundCalibrationActive={backgroundCalibrationActive}
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
             onStartBackgroundMove={onStartBackgroundMove}
             onUpdateBackground={onUpdateBackground}
           />
+          {backgroundCalibrationPoints.length > 0 && (
+            <>
+              {backgroundCalibrationPoints.length === 2 && (
+                <Line
+                  points={[
+                    backgroundCalibrationPoints[0].x,
+                    backgroundCalibrationPoints[0].y,
+                    backgroundCalibrationPoints[1].x,
+                    backgroundCalibrationPoints[1].y,
+                  ]}
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  dash={[6, 4]}
+                  listening={false}
+                />
+              )}
+              {backgroundCalibrationPoints.map((point, index) => (
+                <Circle
+                  key={index}
+                  x={point.x}
+                  y={point.y}
+                  radius={5}
+                  fill="#2563eb"
+                  stroke="white"
+                  strokeWidth={2}
+                  listening={false}
+                />
+              ))}
+            </>
+          )}
 
           <WallLayer
             walls={walls}

@@ -9,6 +9,7 @@ function Canvas({
   windows,
   openings,
   background,
+  backgroundCalibrationActive,
   addWall,
   addDoor,
   addWindow,
@@ -32,6 +33,7 @@ function Canvas({
   onClearSelection,
   onStartBackgroundMove,
   onUpdateBackground,
+  onFinishBackgroundCalibration,
   onStartDoorMove,
   onUpdateDoorPosition,
   onUpdateWindowPosition,
@@ -70,6 +72,7 @@ function Canvas({
           windows={windows}
           openings={openings}
           background={background}
+          backgroundCalibrationActive={backgroundCalibrationActive}
           addWall={addWall}
           addDoor={addDoor}
           addWindow={addWindow}
@@ -93,6 +96,7 @@ function Canvas({
           onClearSelection={onClearSelection}
           onStartBackgroundMove={onStartBackgroundMove}
           onUpdateBackground={onUpdateBackground}
+          onFinishBackgroundCalibration={onFinishBackgroundCalibration}
           onStartDoorMove={onStartDoorMove}
           onUpdateDoorPosition={onUpdateDoorPosition}
           onUpdateWindowPosition={onUpdateWindowPosition}

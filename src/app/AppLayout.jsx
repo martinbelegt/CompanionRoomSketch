@@ -404,6 +404,8 @@ function AppLayout() {
   const [undoStack, setUndoStack] = useState([]);
   const [activeSnapGuides, setActiveSnapGuides] = useState([]);
   const [bulkSelection, setBulkSelection] = useState(EMPTY_BULK_SELECTION);
+  const [backgroundCalibrationActive, setBackgroundCalibrationActive] =
+    useState(false);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -438,6 +440,7 @@ function AppLayout() {
     setSelectedRoomIds([]);
     setSelectedFurnitureId(null);
     setBulkSelection(EMPTY_BULK_SELECTION);
+    setBackgroundCalibrationActive(false);
   }
 
   function undoLastCanvasChange() {
@@ -716,7 +719,50 @@ function AppLayout() {
 
     pushUndoSnapshot();
     setBackground(null);
+    setBackgroundCalibrationActive(false);
     setSelectedObject(null);
+  }
+
+  function startBackgroundCalibration() {
+    if (!background) return;
+
+    setSelectedObject({ type: "background", id: "background" });
+    setBackgroundCalibrationActive(true);
+  }
+
+  function finishBackgroundCalibration(points) {
+    if (!background || points.length !== 2) return;
+
+    const [pointA, pointB] = points;
+    const pixelDistance = Math.sqrt(
+      (pointB.x - pointA.x) ** 2 + (pointB.y - pointA.y) ** 2,
+    );
+
+    if (!pixelDistance) return;
+
+    const input = window.prompt("Werkelijke afstand in millimeters:", "8800");
+    const realDistanceMm = Number(input);
+
+    if (!Number.isFinite(realDistanceMm) || realDistanceMm <= 0) {
+      setBackgroundCalibrationActive(false);
+      return;
+    }
+
+    const mmPerPixel = calibration?.mmPerPixel ?? 10;
+    const targetPixelDistance = realDistanceMm / mmPerPixel;
+    const nextScale =
+      (background.scale ?? 1) * (targetPixelDistance / pixelDistance);
+
+    pushUndoSnapshot();
+    setBackground((current) =>
+      current
+        ? {
+            ...current,
+            scale: nextScale,
+          }
+        : current,
+    );
+    setBackgroundCalibrationActive(false);
   }
 
   useEffect(() => {
@@ -1558,6 +1604,7 @@ function AppLayout() {
 
         setSelectedFurnitureId(null);
         setBulkSelection(EMPTY_BULK_SELECTION);
+        setBackgroundCalibrationActive(false);
         setActiveTool("select");
         setTemporaryTool(null);
 
@@ -1708,6 +1755,7 @@ function AppLayout() {
           doors={doors}
           openings={openings}
           background={background}
+          backgroundCalibrationActive={backgroundCalibrationActive}
           addWall={addWall}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
@@ -1733,6 +1781,7 @@ function AppLayout() {
           onClearSelection={clearSelection}
           onStartBackgroundMove={startBackgroundMove}
           onUpdateBackground={updateBackground}
+          onFinishBackgroundCalibration={finishBackgroundCalibration}
           windows={windows}
           addWindow={addWindow}
           onUpdateWindowPosition={updateWindowPosition}
@@ -1767,11 +1816,13 @@ function AppLayout() {
           doors={doors}
           openings={openings}
           background={background}
+          backgroundCalibrationActive={backgroundCalibrationActive}
           onToggleDoorDirection={toggleDoorDirection}
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}
           onUpdateBackground={updateBackground}
           onRemoveBackground={removeBackground}
+          onStartBackgroundCalibration={startBackgroundCalibration}
         />
       </main>
 

@@ -3,6 +3,7 @@ import useImage from "use-image";
 
 function BackgroundLayer({
   background,
+  backgroundCalibrationActive,
   selectedObject,
   onSelectObject,
   onStartBackgroundMove,
@@ -13,7 +14,7 @@ function BackgroundLayer({
   if (!background?.visible || !image) return null;
 
   const isSelected = selectedObject?.type === "background";
-  const isInteractive = !background.locked;
+  const isInteractive = !background.locked && !backgroundCalibrationActive;
 
   return (
     <Image
