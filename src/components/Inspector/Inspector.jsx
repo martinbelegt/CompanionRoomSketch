@@ -15,12 +15,17 @@ function Inspector({
   openings = [],
   background,
   backgroundCalibrationActive,
+  backgroundRoomAlignActive,
+  rooms = [],
+  selectedRoomId,
+  selectedRoomIds = [],
   onToggleDoorDirection = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
   onUpdateBackground = () => {},
   onRemoveBackground = () => {},
   onStartBackgroundCalibration = () => {},
+  onStartBackgroundRoomAlign = () => {},
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -40,6 +45,15 @@ function Inspector({
       : null;
   const selectedBackground =
     selectedObject?.type === "background" ? background : null;
+  const selectedRoomIdsForReference = selectedRoomIds.length
+    ? selectedRoomIds
+    : selectedRoomId
+      ? [selectedRoomId]
+      : [];
+  const selectedReferenceRoom =
+    selectedRoomIdsForReference.length === 1
+      ? rooms.find((room) => room.id === selectedRoomIdsForReference[0])
+      : null;
 
   const hasValidCalibration =
     calibration?.mmPerPixel != null && !Number.isNaN(calibration.mmPerPixel);
@@ -162,6 +176,30 @@ function Inspector({
               Remove background
             </button>
           </>
+        ) : background && selectedReferenceRoom?.bounds ? (
+          <>
+            <div className="info-row">
+              <span>Referentie</span>
+              <strong>{selectedReferenceRoom.name}</strong>
+            </div>
+
+            <button
+              className="primary-button"
+              onClick={onStartBackgroundRoomAlign}
+            >
+              Gebruik deze room als referentie
+            </button>
+
+            {backgroundRoomAlignActive && (
+              <p className="muted">
+                Klik in dezelfde ruimte op de bouwtekening.
+              </p>
+            )}
+          </>
+        ) : background ? (
+          <p className="muted">
+            Selecteer een room om de bouwtekening daarop uit te lijnen.
+          </p>
         ) : (
           <p className="muted">Importeer of selecteer een bouwtekening.</p>
         )}

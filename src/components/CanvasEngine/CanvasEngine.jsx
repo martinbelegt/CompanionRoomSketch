@@ -95,6 +95,7 @@ function CanvasEngine({
   openings,
   background,
   backgroundCalibrationActive,
+  backgroundRoomAlignActive,
   addWall,
   addDoor,
   addWindow,
@@ -121,6 +122,7 @@ function CanvasEngine({
   onStartBackgroundMove,
   onUpdateBackground,
   onFinishBackgroundCalibration,
+  onFinishBackgroundRoomAlign,
   onUpdateWindowPosition,
   resetCanvasRequest,
   showWallDimensions,
@@ -225,6 +227,11 @@ function CanvasEngine({
     const rawPointer = getWorldPointer(stage);
 
     if (!rawPointer) return;
+
+    if (backgroundRoomAlignActive) {
+      onFinishBackgroundRoomAlign?.(rawPointer);
+      return;
+    }
 
     if (backgroundCalibrationActive) {
       const nextPoints = [...backgroundCalibrationPoints, rawPointer].slice(
@@ -478,7 +485,9 @@ function CanvasEngine({
           {showFloorplan && <FloorplanLayer />}
           <BackgroundLayer
             background={background}
-            backgroundCalibrationActive={backgroundCalibrationActive}
+            backgroundCalibrationActive={
+              backgroundCalibrationActive || backgroundRoomAlignActive
+            }
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
             onStartBackgroundMove={onStartBackgroundMove}

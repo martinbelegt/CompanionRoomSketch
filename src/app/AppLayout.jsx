@@ -406,6 +406,8 @@ function AppLayout() {
   const [bulkSelection, setBulkSelection] = useState(EMPTY_BULK_SELECTION);
   const [backgroundCalibrationActive, setBackgroundCalibrationActive] =
     useState(false);
+  const [backgroundRoomAlignActive, setBackgroundRoomAlignActive] =
+    useState(false);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -441,6 +443,7 @@ function AppLayout() {
     setSelectedFurnitureId(null);
     setBulkSelection(EMPTY_BULK_SELECTION);
     setBackgroundCalibrationActive(false);
+    setBackgroundRoomAlignActive(false);
   }
 
   function undoLastCanvasChange() {
@@ -573,6 +576,7 @@ function AppLayout() {
     setSelectedFurnitureId(null);
     setBulkSelection(EMPTY_BULK_SELECTION);
     setActiveSnapGuides([]);
+    setBackgroundRoomAlignActive(false);
   }
 
   function clearWalls() {
@@ -720,6 +724,7 @@ function AppLayout() {
     pushUndoSnapshot();
     setBackground(null);
     setBackgroundCalibrationActive(false);
+    setBackgroundRoomAlignActive(false);
     setSelectedObject(null);
   }
 
@@ -727,7 +732,55 @@ function AppLayout() {
     if (!background) return;
 
     setSelectedObject({ type: "background", id: "background" });
+    setBackgroundRoomAlignActive(false);
     setBackgroundCalibrationActive(true);
+  }
+
+  function getSingleSelectedRoom() {
+    const selectedIds = selectedRoomIds.length
+      ? selectedRoomIds
+      : selectedRoomId
+        ? [selectedRoomId]
+        : [];
+
+    if (selectedIds.length !== 1) return null;
+
+    return rooms.find((room) => room.id === selectedIds[0]) ?? null;
+  }
+
+  function startBackgroundRoomAlign() {
+    const room = getSingleSelectedRoom();
+
+    if (!background || !room?.bounds) return;
+
+    setBackgroundCalibrationActive(false);
+    setBackgroundRoomAlignActive(true);
+  }
+
+  function finishBackgroundRoomAlign(point) {
+    const room = getSingleSelectedRoom();
+
+    if (!background || !room?.bounds || !point) {
+      setBackgroundRoomAlignActive(false);
+      return;
+    }
+
+    const roomCenter = {
+      x: room.bounds.x + room.bounds.width / 2,
+      y: room.bounds.y + room.bounds.height / 2,
+    };
+
+    pushUndoSnapshot();
+    setBackground((current) =>
+      current
+        ? {
+            ...current,
+            x: (current.x ?? 0) + roomCenter.x - point.x,
+            y: (current.y ?? 0) + roomCenter.y - point.y,
+          }
+        : current,
+    );
+    setBackgroundRoomAlignActive(false);
   }
 
   function finishBackgroundCalibration(points) {
@@ -1605,6 +1658,7 @@ function AppLayout() {
         setSelectedFurnitureId(null);
         setBulkSelection(EMPTY_BULK_SELECTION);
         setBackgroundCalibrationActive(false);
+        setBackgroundRoomAlignActive(false);
         setActiveTool("select");
         setTemporaryTool(null);
 
@@ -1756,6 +1810,7 @@ function AppLayout() {
           openings={openings}
           background={background}
           backgroundCalibrationActive={backgroundCalibrationActive}
+          backgroundRoomAlignActive={backgroundRoomAlignActive}
           addWall={addWall}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
@@ -1782,6 +1837,7 @@ function AppLayout() {
           onStartBackgroundMove={startBackgroundMove}
           onUpdateBackground={updateBackground}
           onFinishBackgroundCalibration={finishBackgroundCalibration}
+          onFinishBackgroundRoomAlign={finishBackgroundRoomAlign}
           windows={windows}
           addWindow={addWindow}
           onUpdateWindowPosition={updateWindowPosition}
@@ -1817,12 +1873,17 @@ function AppLayout() {
           openings={openings}
           background={background}
           backgroundCalibrationActive={backgroundCalibrationActive}
+          backgroundRoomAlignActive={backgroundRoomAlignActive}
+          rooms={rooms}
+          selectedRoomId={selectedRoomId}
+          selectedRoomIds={selectedRoomIds}
           onToggleDoorDirection={toggleDoorDirection}
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}
           onUpdateBackground={updateBackground}
           onRemoveBackground={removeBackground}
           onStartBackgroundCalibration={startBackgroundCalibration}
+          onStartBackgroundRoomAlign={startBackgroundRoomAlign}
         />
       </main>
 

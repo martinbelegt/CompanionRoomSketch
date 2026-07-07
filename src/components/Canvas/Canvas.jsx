@@ -10,6 +10,7 @@ function Canvas({
   openings,
   background,
   backgroundCalibrationActive,
+  backgroundRoomAlignActive,
   addWall,
   addDoor,
   addWindow,
@@ -34,6 +35,7 @@ function Canvas({
   onStartBackgroundMove,
   onUpdateBackground,
   onFinishBackgroundCalibration,
+  onFinishBackgroundRoomAlign,
   onStartDoorMove,
   onUpdateDoorPosition,
   onUpdateWindowPosition,
@@ -63,6 +65,11 @@ function Canvas({
           Klik op de muur waarin je de open doorgang wilt maken.
         </div>
       )}
+      {backgroundRoomAlignActive && (
+        <div className="canvas-hint">
+          Klik in dezelfde ruimte op de bouwtekening.
+        </div>
+      )}
 
       <div className="canvas-stage">
         <CanvasEngine
@@ -73,6 +80,7 @@ function Canvas({
           openings={openings}
           background={background}
           backgroundCalibrationActive={backgroundCalibrationActive}
+          backgroundRoomAlignActive={backgroundRoomAlignActive}
           addWall={addWall}
           addDoor={addDoor}
           addWindow={addWindow}
@@ -97,6 +105,7 @@ function Canvas({
           onStartBackgroundMove={onStartBackgroundMove}
           onUpdateBackground={onUpdateBackground}
           onFinishBackgroundCalibration={onFinishBackgroundCalibration}
+          onFinishBackgroundRoomAlign={onFinishBackgroundRoomAlign}
           onStartDoorMove={onStartDoorMove}
           onUpdateDoorPosition={onUpdateDoorPosition}
           onUpdateWindowPosition={onUpdateWindowPosition}
