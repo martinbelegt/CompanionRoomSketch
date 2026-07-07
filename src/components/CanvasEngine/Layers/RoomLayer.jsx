@@ -47,7 +47,7 @@ function RoomLayer({
 
             if (delta.x === 0 && delta.y === 0) return;
 
-            onMoveRoom(room.id, delta);
+            onMoveRoom(room.id, delta, { snap: true });
 
             e.target.position({
               x: room.center?.x ?? 0,

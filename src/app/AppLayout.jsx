@@ -25,6 +25,8 @@ const STORAGE_KEYS = {
   rooms: "companion-roomsketch-rooms",
 };
 
+const SNAP_DISTANCE = 20;
+
 function loadFromStorage(key, fallback) {
   const saved = localStorage.getItem(key);
   return saved ? JSON.parse(saved) : fallback;
@@ -32,6 +34,85 @@ function loadFromStorage(key, fallback) {
 
 function cloneCanvasState(snapshot) {
   return JSON.parse(JSON.stringify(snapshot));
+}
+
+function rangesOverlap(startA, endA, startB, endB) {
+  return Math.max(startA, startB) < Math.min(endA, endB);
+}
+
+function getSnappedRoomPosition({ room, proposedBounds, rooms, snapDistance }) {
+  if (!room?.bounds || !proposedBounds) {
+    return { x: proposedBounds?.x ?? 0, y: proposedBounds?.y ?? 0 };
+  }
+
+  const proposedRight = proposedBounds.x + proposedBounds.width;
+  const proposedBottom = proposedBounds.y + proposedBounds.height;
+
+  let snapX = null;
+  let snapY = null;
+
+  for (const otherRoom of rooms) {
+    if (otherRoom.id === room.id || !otherRoom.bounds) continue;
+
+    const otherBounds = otherRoom.bounds;
+    const otherRight = otherBounds.x + otherBounds.width;
+    const otherBottom = otherBounds.y + otherBounds.height;
+
+    if (
+      rangesOverlap(
+        proposedBounds.y,
+        proposedBottom,
+        otherBounds.y,
+        otherBottom,
+      )
+    ) {
+      const xCandidates = [
+        otherBounds.x - proposedRight,
+        otherRight - proposedBounds.x,
+      ];
+
+      for (const offset of xCandidates) {
+        const distance = Math.abs(offset);
+
+        if (
+          distance <= snapDistance &&
+          (!snapX || distance < snapX.distance)
+        ) {
+          snapX = { offset, distance };
+        }
+      }
+    }
+
+    if (
+      rangesOverlap(
+        proposedBounds.x,
+        proposedBounds.x + proposedBounds.width,
+        otherBounds.x,
+        otherRight,
+      )
+    ) {
+      const yCandidates = [
+        otherBounds.y - proposedBottom,
+        otherBottom - proposedBounds.y,
+      ];
+
+      for (const offset of yCandidates) {
+        const distance = Math.abs(offset);
+
+        if (
+          distance <= snapDistance &&
+          (!snapY || distance < snapY.distance)
+        ) {
+          snapY = { offset, distance };
+        }
+      }
+    }
+  }
+
+  return {
+    x: proposedBounds.x + (snapX?.offset ?? 0),
+    y: proposedBounds.y + (snapY?.offset ?? 0),
+  };
 }
 
 function AppLayout() {
@@ -508,10 +589,33 @@ function AppLayout() {
     );
   }
 
-  function moveRoom(roomId, delta) {
+  function moveRoom(roomId, delta, options = {}) {
     const room = rooms.find((item) => item.id === roomId);
 
     if (!room) return;
+
+    let moveDelta = delta;
+
+    if (options.snap && room.bounds) {
+      const proposedBounds = {
+        ...room.bounds,
+        x: room.bounds.x + delta.x,
+        y: room.bounds.y + delta.y,
+      };
+      const snappedPosition = getSnappedRoomPosition({
+        room,
+        proposedBounds,
+        rooms,
+        snapDistance: SNAP_DISTANCE,
+      });
+
+      moveDelta = {
+        x: snappedPosition.x - room.bounds.x,
+        y: snappedPosition.y - room.bounds.y,
+      };
+    }
+
+    if (moveDelta.x === 0 && moveDelta.y === 0) return;
 
     pushUndoSnapshot();
 
@@ -522,12 +626,12 @@ function AppLayout() {
           ? {
               ...wall,
               startPoint: {
-                x: wall.startPoint.x + delta.x,
-                y: wall.startPoint.y + delta.y,
+                x: wall.startPoint.x + moveDelta.x,
+                y: wall.startPoint.y + moveDelta.y,
               },
               endPoint: {
-                x: wall.endPoint.x + delta.x,
-                y: wall.endPoint.y + delta.y,
+                x: wall.endPoint.x + moveDelta.x,
+                y: wall.endPoint.y + moveDelta.y,
               },
             }
           : wall,
@@ -541,8 +645,8 @@ function AppLayout() {
           ? {
               ...door,
               position: {
-                x: door.position.x + delta.x,
-                y: door.position.y + delta.y,
+                x: door.position.x + moveDelta.x,
+                y: door.position.y + moveDelta.y,
               },
             }
           : door,
@@ -556,8 +660,8 @@ function AppLayout() {
           ? {
               ...windowItem,
               position: {
-                x: windowItem.position.x + delta.x,
-                y: windowItem.position.y + delta.y,
+                x: windowItem.position.x + moveDelta.x,
+                y: windowItem.position.y + moveDelta.y,
               },
             }
           : windowItem,
@@ -571,14 +675,14 @@ function AppLayout() {
           ? {
               ...item,
               center: {
-                x: item.center.x + delta.x,
-                y: item.center.y + delta.y,
+                x: item.center.x + moveDelta.x,
+                y: item.center.y + moveDelta.y,
               },
               bounds: item.bounds
                 ? {
                     ...item.bounds,
-                    x: item.bounds.x + delta.x,
-                    y: item.bounds.y + delta.y,
+                    x: item.bounds.x + moveDelta.x,
+                    y: item.bounds.y + moveDelta.y,
                   }
                 : item.bounds,
             }
