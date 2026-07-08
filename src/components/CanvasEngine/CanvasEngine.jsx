@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import "./CanvasEngine.css";
 
-import { Circle, Line, Stage, Layer, Rect } from "react-konva";
+import { Stage, Layer, Rect } from "react-konva";
 import useCanvasSize from "../../hooks/useCanvasSize";
 import useCanvasCamera from "./Hooks/useCanvasCamera";
 
@@ -57,6 +57,45 @@ function snapPointWithShift(pointA, pointB, shiftKey) {
   return Math.abs(dx) >= Math.abs(dy)
     ? { x: pointB.x, y: pointA.y }
     : { x: pointA.x, y: pointB.y };
+}
+
+function constrainPointToAxis(pointA, pointB, shiftKey) {
+  if (!pointA) return pointB;
+
+  const dx = pointB.x - pointA.x;
+  const dy = pointB.y - pointA.y;
+
+  if (shiftKey) {
+    return Math.abs(dx) >= Math.abs(dy)
+      ? { x: pointB.x, y: pointA.y }
+      : { x: pointA.x, y: pointB.y };
+  }
+
+  const tolerance = Math.tan((10 * Math.PI) / 180);
+  const absDx = Math.abs(dx);
+  const absDy = Math.abs(dy);
+
+  if (absDx > 0 && absDy / absDx <= tolerance) {
+    return { x: pointB.x, y: pointA.y };
+  }
+
+  if (absDy > 0 && absDx / absDy <= tolerance) {
+    return { x: pointA.x, y: pointB.y };
+  }
+
+  return pointB;
+}
+
+function buildMeasurementPoints({ points, pointer, shiftKey }) {
+  if (points.length >= 2) return [pointer];
+
+  const pointA = points[0];
+  const nextPoint =
+    points.length === 1
+      ? constrainPointToAxis(pointA, pointer, shiftKey)
+      : pointer;
+
+  return [...points, nextPoint];
 }
 
 function getMeasuredDistanceMm(pixelDistance, calibration) {
@@ -234,10 +273,11 @@ function CanvasEngine({
     }
 
     if (backgroundCalibrationActive) {
-      const nextPoints = [...backgroundCalibrationPoints, rawPointer].slice(
-        0,
-        2,
-      );
+      const nextPoints = buildMeasurementPoints({
+        points: backgroundCalibrationPoints,
+        pointer: rawPointer,
+        shiftKey: e.evt.shiftKey,
+      });
 
       setBackgroundCalibrationPoints(nextPoints);
 
@@ -343,14 +383,11 @@ function CanvasEngine({
       return;
     }
 
-    const pointA = currentPoints[0];
-
-    const worldPointer =
-      currentPoints.length === 1
-        ? snapPointWithShift(pointA, rawPointer, e.evt.shiftKey)
-        : rawPointer;
-
-    const nextPoints = [...currentPoints, worldPointer];
+    const nextPoints = buildMeasurementPoints({
+      points: currentPoints,
+      pointer: rawPointer,
+      shiftKey: e.evt.shiftKey,
+    });
 
     const pixelDistance =
       nextPoints.length === 2
@@ -365,16 +402,24 @@ function CanvasEngine({
   }
 
   const measurementPoints = measurement.points ?? [];
-  const livePointA = measurementPoints[0];
+  const activeMeasurementPoints = backgroundCalibrationActive
+    ? backgroundCalibrationPoints
+    : measurementPoints;
+  const livePointA = activeMeasurementPoints[0];
+  const isMeasuring = currentTool === "measure" || backgroundCalibrationActive;
   const hasLiveMeasurement =
-    currentTool === "measure" &&
-    measurementPoints.length === 1 &&
-    calibration?.mmPerPixel;
+    isMeasuring &&
+    activeMeasurementPoints.length === 1;
 
   const liveMeasurementEndPoint =
     hasLiveMeasurement && livePointA
-      ? snapPointWithShift(livePointA, cursor, shiftPressed)
+      ? constrainPointToAxis(livePointA, cursor, shiftPressed)
       : cursor;
+
+  const visibleMeasurementPoints =
+    hasLiveMeasurement && livePointA
+      ? [livePointA, liveMeasurementEndPoint]
+      : activeMeasurementPoints;
 
   const livePixelDistance =
     hasLiveMeasurement && livePointA
@@ -482,9 +527,10 @@ function CanvasEngine({
         }}
       >
         <Layer>
-          {showFloorplan && <FloorplanLayer />}
+          {showFloorplan && !background && <FloorplanLayer />}
           <BackgroundLayer
             background={background}
+            visible={showFloorplan}
             backgroundCalibrationActive={
               backgroundCalibrationActive || backgroundRoomAlignActive
             }
@@ -493,37 +539,6 @@ function CanvasEngine({
             onStartBackgroundMove={onStartBackgroundMove}
             onUpdateBackground={onUpdateBackground}
           />
-          {backgroundCalibrationPoints.length > 0 && (
-            <>
-              {backgroundCalibrationPoints.length === 2 && (
-                <Line
-                  points={[
-                    backgroundCalibrationPoints[0].x,
-                    backgroundCalibrationPoints[0].y,
-                    backgroundCalibrationPoints[1].x,
-                    backgroundCalibrationPoints[1].y,
-                  ]}
-                  stroke="#2563eb"
-                  strokeWidth={2}
-                  dash={[6, 4]}
-                  listening={false}
-                />
-              )}
-              {backgroundCalibrationPoints.map((point, index) => (
-                <Circle
-                  key={index}
-                  x={point.x}
-                  y={point.y}
-                  radius={5}
-                  fill="#2563eb"
-                  stroke="white"
-                  strokeWidth={2}
-                  listening={false}
-                />
-              ))}
-            </>
-          )}
-
           <WallLayer
             walls={walls}
             selectedWallId={selectedWallId}
@@ -610,8 +625,8 @@ function CanvasEngine({
             onResize={onResizeFurniture}
           />
 
-          {currentTool === "measure" && (
-            <MeasurementLayer points={measurementPoints} />
+          {isMeasuring && (
+            <MeasurementLayer points={visibleMeasurementPoints} />
           )}
 
           {hasLiveMeasurement && liveDistanceMm != null && (
@@ -630,7 +645,7 @@ function CanvasEngine({
             />
           )}
 
-          {currentTool === "measure" && (
+          {isMeasuring && (
             <CursorLayer cursor={cursor} onMove={setCursor} />
           )}
           {marqueeStart && marqueeEnd && (

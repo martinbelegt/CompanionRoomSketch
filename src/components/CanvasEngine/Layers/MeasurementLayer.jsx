@@ -1,4 +1,4 @@
-import { Circle, Line, Text } from "react-konva";
+import { Line, Text } from "react-konva";
 
 function getDistance(pointA, pointB) {
   const dx = pointB.x - pointA.x;
@@ -27,18 +27,6 @@ function MeasurementLayer({ points }) {
           dash={[10, 6]}
         />
       )}
-
-      {points.map((point, index) => (
-        <Circle
-          key={index}
-          x={point.x}
-          y={point.y}
-          radius={6}
-          fill="#dc2626"
-          stroke="white"
-          strokeWidth={2}
-        />
-      ))}
 
       <Text
         x={labelX}

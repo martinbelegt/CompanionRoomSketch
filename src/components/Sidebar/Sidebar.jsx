@@ -1,7 +1,5 @@
 import { useState } from "react";
 
-import RoomSketchWizard from "../Wizard/RoomSketchWizard";
-
 import "./Sidebar.css";
 
 const starterFurnitureGroups = [
@@ -119,8 +117,6 @@ function Sidebar({
 
   return (
     <aside className="sidebar">
-      <RoomSketchWizard onSelectTool={onSelectTool} />
-
       <div className="sidebar-card sidebar-card-gray">
         <div className="sidebar-section-title">Stap 1 • Woning tekenen</div>
 
@@ -241,7 +237,7 @@ function Sidebar({
           Bouwtekening importeren
           <input
             type="file"
-            accept="image/png,image/svg+xml"
+            accept="image/svg+xml,image/png,image/jpeg,application/pdf,.svg,.png,.jpg,.jpeg,.pdf"
             style={{ display: "none" }}
             onChange={(e) => {
               onImportBackground(e.target.files?.[0]);

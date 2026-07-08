@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as pdfjsLib from "pdfjs-dist";
 
 import Toolbar from "../components/Toolbar/Toolbar";
 import Sidebar from "../components/Sidebar/Sidebar";
@@ -14,6 +15,11 @@ import "../styles/AppLayout.css";
 import { createCalibration } from "../measurement";
 
 import { createWall } from "../walls/wallUtils";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.mjs",
+  import.meta.url,
+).toString();
 
 const STORAGE_KEYS = {
   furniture: "companion-roomsketch-placed-furniture",
@@ -44,6 +50,22 @@ function loadFromStorage(key, fallback) {
 
 function cloneCanvasState(snapshot) {
   return JSON.parse(JSON.stringify(snapshot));
+}
+
+async function renderPdfFirstPage(file) {
+  const data = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 2 });
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  await page.render({ canvasContext: context, viewport }).promise;
+
+  return canvas.toDataURL("image/png");
 }
 
 function rangesOverlap(startA, endA, startB, endB) {
@@ -468,6 +490,10 @@ function AppLayout() {
     useState(false);
   const [backgroundRoomAlignActive, setBackgroundRoomAlignActive] =
     useState(false);
+  const [backgroundScaleCompleted, setBackgroundScaleCompleted] =
+    useState(false);
+  const [backgroundCalibrationMeasurement, setBackgroundCalibrationMeasurement] =
+    useState(null);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -655,7 +681,20 @@ function AppLayout() {
   }
 
   function toggleFloorplan() {
-    setShowFloorplan((current) => !current);
+    setShowFloorplan((current) => {
+      const nextVisible = !current;
+
+      setBackground((currentBackground) =>
+        currentBackground
+          ? {
+              ...currentBackground,
+              visible: nextVisible,
+            }
+          : currentBackground,
+      );
+
+      return nextVisible;
+    });
   }
 
   const [selectedFurnitureId, setSelectedFurnitureId] = useState(null);
@@ -725,14 +764,47 @@ function AppLayout() {
     localStorage.setItem(STORAGE_KEYS.background, JSON.stringify(background));
   }, [background]);
 
-  function importBackground(file) {
+  async function importBackground(file) {
     if (!file) return;
 
-    const isSvg = file.type === "image/svg+xml" || file.name.endsWith(".svg");
-    const isPng = file.type === "image/png" || file.name.endsWith(".png");
+    const lowerName = file.name.toLowerCase();
+    const isSvg = file.type === "image/svg+xml" || lowerName.endsWith(".svg");
+    const isPng = file.type === "image/png" || lowerName.endsWith(".png");
+    const isJpg =
+      file.type === "image/jpeg" ||
+      lowerName.endsWith(".jpg") ||
+      lowerName.endsWith(".jpeg");
+    const isPdf =
+      file.type === "application/pdf" || lowerName.endsWith(".pdf");
 
-    if (!isSvg && !isPng) {
-      window.alert("Kies een SVG- of PNG-bestand.");
+    if (!isSvg && !isPng && !isJpg && !isPdf) {
+      window.alert("Kies een SVG-, PNG-, JPG- of PDF-bestand.");
+      return;
+    }
+
+    if (isPdf) {
+      try {
+        const source = await renderPdfFirstPage(file);
+
+        pushUndoSnapshot();
+        setShowFloorplan(true);
+        setBackground({
+          visible: true,
+          locked: true,
+          opacity: 0.5,
+          scale: 1,
+          x: 30,
+          y: 30,
+          type: "pdf",
+          source,
+          name: file.name,
+        });
+        setBackgroundScaleCompleted(false);
+        setSelectedObject({ type: "background", id: "background" });
+      } catch {
+        window.alert("Deze PDF kan niet worden geopend.");
+      }
+
       return;
     }
 
@@ -740,6 +812,7 @@ function AppLayout() {
 
     reader.onload = () => {
       pushUndoSnapshot();
+      setShowFloorplan(true);
       setBackground({
         visible: true,
         locked: true,
@@ -747,10 +820,11 @@ function AppLayout() {
         scale: 1,
         x: 30,
         y: 30,
-        type: isSvg ? "svg" : "png",
+        type: isSvg ? "svg" : isJpg ? "jpg" : "png",
         source: reader.result,
         name: file.name,
       });
+      setBackgroundScaleCompleted(false);
       setSelectedObject({ type: "background", id: "background" });
     };
 
@@ -783,6 +857,8 @@ function AppLayout() {
 
     pushUndoSnapshot();
     setBackground(null);
+    setBackgroundScaleCompleted(false);
+    setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationActive(false);
     setBackgroundRoomAlignActive(false);
     setSelectedObject(null);
@@ -793,6 +869,7 @@ function AppLayout() {
 
     setSelectedObject({ type: "background", id: "background" });
     setBackgroundRoomAlignActive(false);
+    setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationActive(true);
   }
 
@@ -814,6 +891,7 @@ function AppLayout() {
     if (!background || !room?.bounds) return;
 
     setBackgroundCalibrationActive(false);
+    setBackgroundCalibrationMeasurement(null);
     setBackgroundRoomAlignActive(true);
   }
 
@@ -853,18 +931,24 @@ function AppLayout() {
 
     if (!pixelDistance) return;
 
-    const input = window.prompt("Werkelijke afstand in millimeters:", "8800");
-    const realDistanceMm = Number(input);
+    setBackgroundCalibrationMeasurement({
+      points,
+      pixelDistance,
+    });
+  }
+
+  function applyBackgroundCalibration(realDistanceMm) {
+    if (!background || !backgroundCalibrationMeasurement) return;
 
     if (!Number.isFinite(realDistanceMm) || realDistanceMm <= 0) {
-      setBackgroundCalibrationActive(false);
       return;
     }
 
     const mmPerPixel = calibration?.mmPerPixel ?? 10;
     const targetPixelDistance = realDistanceMm / mmPerPixel;
     const nextScale =
-      (background.scale ?? 1) * (targetPixelDistance / pixelDistance);
+      (background.scale ?? 1) *
+      (targetPixelDistance / backgroundCalibrationMeasurement.pixelDistance);
 
     pushUndoSnapshot();
     setBackground((current) =>
@@ -875,6 +959,8 @@ function AppLayout() {
           }
         : current,
     );
+    setBackgroundScaleCompleted(true);
+    setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationActive(false);
   }
 
@@ -2048,6 +2134,9 @@ function AppLayout() {
           background={background}
           backgroundCalibrationActive={backgroundCalibrationActive}
           backgroundRoomAlignActive={backgroundRoomAlignActive}
+          backgroundScaleCompleted={backgroundScaleCompleted}
+          onImportBackground={importBackground}
+          onStartBackgroundCalibration={startBackgroundCalibration}
           addWall={addWall}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
@@ -2111,6 +2200,7 @@ function AppLayout() {
           background={background}
           backgroundCalibrationActive={backgroundCalibrationActive}
           backgroundRoomAlignActive={backgroundRoomAlignActive}
+          backgroundCalibrationMeasurement={backgroundCalibrationMeasurement}
           rooms={rooms}
           selectedRoomId={selectedRoomId}
           selectedRoomIds={selectedRoomIds}
@@ -2122,6 +2212,7 @@ function AppLayout() {
           onUpdateBackground={updateBackground}
           onRemoveBackground={removeBackground}
           onStartBackgroundCalibration={startBackgroundCalibration}
+          onApplyBackgroundCalibration={applyBackgroundCalibration}
           onStartBackgroundRoomAlign={startBackgroundRoomAlign}
         />
       </main>

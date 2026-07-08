@@ -14,8 +14,10 @@ function Inspector({
   doors = [],
   openings = [],
   background,
+  backgroundScaleCompleted,
   backgroundCalibrationActive,
   backgroundRoomAlignActive,
+  backgroundCalibrationMeasurement,
   rooms = [],
   selectedRoomId,
   selectedRoomIds = [],
@@ -27,9 +29,11 @@ function Inspector({
   onUpdateBackground = () => {},
   onRemoveBackground = () => {},
   onStartBackgroundCalibration = () => {},
+  onApplyBackgroundCalibration = () => {},
   onStartBackgroundRoomAlign = () => {},
 }) {
   const [realDistanceMm, setRealDistanceMm] = useState("");
+  const [backgroundDistanceMm, setBackgroundDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
   const [depthCm, setDepthCm] = useState("");
   const [roomLengthMm, setRoomLengthMm] = useState("");
@@ -46,8 +50,13 @@ function Inspector({
     selectedObject?.type === "opening"
       ? openings.find((opening) => opening.id === selectedObject.id)
       : null;
+  const showBackgroundForOnboarding = Boolean(
+    background && !backgroundScaleCompleted,
+  );
   const selectedBackground =
-    selectedObject?.type === "background" ? background : null;
+    selectedObject?.type === "background" || showBackgroundForOnboarding
+      ? background
+      : null;
   const selectedRoomIdsForReference = selectedRoomIds.length
     ? selectedRoomIds
     : selectedRoomId
@@ -112,6 +121,15 @@ function Inspector({
     onCalibrate(enteredDistance);
   }
 
+  function handleSetBackgroundScale() {
+    const distanceMm = Number(backgroundDistanceMm.replace(",", "."));
+
+    if (!Number.isFinite(distanceMm) || distanceMm <= 0) return;
+
+    onApplyBackgroundCalibration(distanceMm);
+    setBackgroundDistanceMm("");
+  }
+
   function handleSaveFurnitureSize() {
     if (!selectedFurniture) return;
 
@@ -143,6 +161,24 @@ function Inspector({
       lengthMm: nextLengthMm,
       widthMm: nextWidthMm,
     });
+  }
+
+  if (
+    !background &&
+    !selectedRoom?.bounds &&
+    !selectedFurniture &&
+    !selectedDoor &&
+    !selectedOpening
+  ) {
+    return (
+      <aside className="inspector">
+        <h2>Eigenschappen</h2>
+
+        <section className="inspector-section">
+          <p className="muted">Volg eerst de Coach om te beginnen.</p>
+        </section>
+      </aside>
+    );
   }
 
   return (
@@ -178,11 +214,44 @@ function Inspector({
               className="primary-button"
               onClick={onStartBackgroundCalibration}
             >
-              Op maat zetten
+              Afstand kiezen
             </button>
 
             {backgroundCalibrationActive && (
-              <p className="muted">Klik twee punten op de bouwtekening.</p>
+              <p className="muted">
+                Klik de binnenkant van twee tegenoverliggende muren aan.
+              </p>
+            )}
+
+            {backgroundCalibrationMeasurement && (
+              <>
+                <div className="info-row">
+                  <span>Gekozen lijn</span>
+                  <strong>gemeten</strong>
+                </div>
+
+                <label className="field-label">
+                  Werkelijke afstand in millimeters
+                  <input
+                    inputMode="numeric"
+                    value={backgroundDistanceMm}
+                    onChange={(e) => setBackgroundDistanceMm(e.target.value)}
+                    placeholder="Bijvoorbeeld 4074"
+                  />
+                </label>
+
+                <button
+                  className="primary-button"
+                  onClick={handleSetBackgroundScale}
+                  disabled={
+                    !Number.isFinite(
+                      Number(backgroundDistanceMm.replace(",", ".")),
+                    ) || Number(backgroundDistanceMm.replace(",", ".")) <= 0
+                  }
+                >
+                  Zet bouwtekening op maat
+                </button>
+              </>
             )}
 
             <button
@@ -211,7 +280,7 @@ function Inspector({
               className="primary-button"
               onClick={onStartBackgroundRoomAlign}
             >
-              Gebruik deze room als referentie
+              Gebruik deze ruimte als referentie
             </button>
 
             {backgroundRoomAlignActive && (
@@ -222,7 +291,7 @@ function Inspector({
           </>
         ) : background ? (
           <p className="muted">
-            Selecteer de bouwtekening of een room om verder uit te lijnen.
+            Selecteer de bouwtekening of een ruimte om verder uit te lijnen.
           </p>
         ) : (
           <p className="muted">Importeer eerst een bouwtekening.</p>
@@ -291,37 +360,39 @@ function Inspector({
         </section>
       )}
 
-      <section className="inspector-section">
-        <h3>Afstand meten</h3>
+      {!background && (
+        <section className="inspector-section">
+          <h3>Afstand meten</h3>
 
-        {!measurement.pixelDistance ? (
-          <p className="muted">
-            Meet eerst een bekende afstand op de bouwtekening.
-          </p>
-        ) : (
-          <div className="info-row">
-            <span>Gemeten afstand</span>
-            <strong>{measuredDistanceText}</strong>
-          </div>
-        )}
+          {!measurement.pixelDistance ? (
+            <p className="muted">
+              Meet eerst een bekende afstand op de bouwtekening.
+            </p>
+          ) : (
+            <div className="info-row">
+              <span>Gemeten afstand</span>
+              <strong>{measuredDistanceText}</strong>
+            </div>
+          )}
 
-        <label className="field-label">
-          Werkelijke lengte
-          <input
-            value={realDistanceMm}
-            onChange={(e) => setRealDistanceMm(e.target.value)}
-            placeholder="bijv. 4074 mm"
-          />
-        </label>
+          <label className="field-label">
+            Werkelijke lengte
+            <input
+              value={realDistanceMm}
+              onChange={(e) => setRealDistanceMm(e.target.value)}
+              placeholder="bijv. 4074 mm"
+            />
+          </label>
 
-        <button
-          className="primary-button"
-          onClick={handleUseAsScale}
-          disabled={!measurement.pixelDistance || !hasRealDistance}
-        >
-          Zet bouwtekening op maat
-        </button>
-      </section>
+          <button
+            className="primary-button"
+            onClick={handleUseAsScale}
+            disabled={!measurement.pixelDistance || !hasRealDistance}
+          >
+            Zet bouwtekening op maat
+          </button>
+        </section>
+      )}
 
       <section className="inspector-section">
         <h3>Geselecteerd meubel</h3>

@@ -24,28 +24,16 @@
  * ============================================================================
  */
 
-import { Group, Line, Circle } from "react-konva";
+import { Group, Line } from "react-konva";
 
 const COLOR = "#2563eb";
 
 function CursorLayer({ cursor }) {
   return (
     <Group x={cursor.x} y={cursor.y} listening={false}>
-      {/* horizontaal */}
-      <Line points={[-14, 0, -4, 0]} stroke={COLOR} strokeWidth={2} />
+      <Line points={[-18, 0, 18, 0]} stroke={COLOR} strokeWidth={1.5} />
 
-      <Line points={[4, 0, 14, 0]} stroke={COLOR} strokeWidth={2} />
-
-      {/* verticaal */}
-      <Line points={[0, -14, 0, -4]} stroke={COLOR} strokeWidth={2} />
-
-      <Line points={[0, 4, 0, 14]} stroke={COLOR} strokeWidth={2} />
-
-      {/* middelpunt */}
-      <Circle radius={2.5} fill={COLOR} />
-
-      {/* buitenring */}
-      <Circle radius={6} stroke={COLOR} strokeWidth={1} />
+      <Line points={[0, -18, 0, 18]} stroke={COLOR} strokeWidth={1.5} />
     </Group>
   );
 }

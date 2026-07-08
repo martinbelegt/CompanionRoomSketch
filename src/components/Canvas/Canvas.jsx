@@ -1,6 +1,7 @@
 import "./Canvas.css";
 
 import CanvasEngine from "../CanvasEngine/CanvasEngine";
+import RoomSketchWizard from "../Wizard/RoomSketchWizard";
 
 function Canvas({
   furniture,
@@ -11,6 +12,9 @@ function Canvas({
   background,
   backgroundCalibrationActive,
   backgroundRoomAlignActive,
+  backgroundScaleCompleted,
+  onImportBackground,
+  onStartBackgroundCalibration,
   addWall,
   addDoor,
   addWindow,
@@ -129,6 +133,15 @@ function Canvas({
           onSelectOpeningWall={onSelectOpeningWall}
         />
       </div>
+
+      <RoomSketchWizard
+        background={background}
+        backgroundCalibrationActive={backgroundCalibrationActive}
+        backgroundScaleCompleted={backgroundScaleCompleted}
+        onImportBackground={onImportBackground}
+        onStartBackgroundCalibration={onStartBackgroundCalibration}
+        onSelectTool={onSelectTool}
+      />
     </div>
   );
 }
