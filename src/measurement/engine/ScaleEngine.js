@@ -5,7 +5,7 @@ import {
 } from "../constants/measurementConstants";
 import { pixelsToMm } from "../utils/unitConversion";
 
-export function calculatePixelDistance(startPoint, endPoint) {
+export function getWorldDistance(startPoint, endPoint) {
   if (!startPoint || !endPoint) return null;
 
   const dx = endPoint.x - startPoint.x;
@@ -14,8 +14,10 @@ export function calculatePixelDistance(startPoint, endPoint) {
   return Math.sqrt(dx * dx + dy * dy);
 }
 
+export const calculatePixelDistance = getWorldDistance;
+
 export function createCalibration({ startPoint, endPoint, realDistanceMm }) {
-  const pixelDistance = calculatePixelDistance(startPoint, endPoint);
+  const pixelDistance = getWorldDistance(startPoint, endPoint);
 
   if (
     !Number.isFinite(pixelDistance) ||
@@ -84,7 +86,7 @@ export function verifyCalibration({
 }) {
   if (!isCalibrationValid(calibration)) return null;
 
-  const pixelDistance = calculatePixelDistance(startPoint, endPoint);
+  const pixelDistance = getWorldDistance(startPoint, endPoint);
   const measuredMm = measurePixelsWithCalibration(pixelDistance, calibration);
   const deviationPercent = calculateDeviationPercent(
     expectedDistanceMm,

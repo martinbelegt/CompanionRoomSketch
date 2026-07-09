@@ -1,5 +1,5 @@
 import {
-  calculatePixelDistance,
+  getWorldDistance,
   isCalibrationValid,
   measurePixelsWithCalibration,
 } from "./ScaleEngine";
@@ -9,7 +9,7 @@ export function measureDistance({ startPoint, endPoint, calibration }) {
     return null;
   }
 
-  const pixelDistance = calculatePixelDistance(startPoint, endPoint);
+  const pixelDistance = getWorldDistance(startPoint, endPoint);
 
   if (!Number.isFinite(pixelDistance)) {
     return null;

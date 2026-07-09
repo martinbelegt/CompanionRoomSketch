@@ -12,7 +12,7 @@ import RectangleRoomDialog from "../components/RectangleRoomDialog/RectangleRoom
 import OpeningDialog from "../components/OpeningDialog/OpeningDialog";
 
 import "../styles/AppLayout.css";
-import { createCalibration } from "../measurement";
+import { createCalibration, getWorldDistance } from "../measurement";
 
 import { createWall } from "../walls/wallUtils";
 
@@ -1043,6 +1043,8 @@ function AppLayout() {
     if (!background) return;
 
     setShowFloorplan(true);
+    setActiveTool("select");
+    setTemporaryTool("measure");
     setBackground((current) =>
       current
         ? {
@@ -1062,6 +1064,7 @@ function AppLayout() {
     setBackgroundCalibrationActive(false);
     setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationPointCount(0);
+    setTemporaryTool(null);
   }
 
   function startBackgroundWorkflow(startStep) {
@@ -1140,9 +1143,7 @@ function AppLayout() {
     if (!background || points.length !== 2) return;
 
     const [pointA, pointB] = points;
-    const pixelDistance = Math.sqrt(
-      (pointB.x - pointA.x) ** 2 + (pointB.y - pointA.y) ** 2,
-    );
+    const pixelDistance = getWorldDistance(pointA, pointB);
 
     if (!pixelDistance) return;
 
@@ -1153,22 +1154,36 @@ function AppLayout() {
     setBackgroundCalibrationPointCount(points.length);
   }
 
-  function applyBackgroundCalibration(realDistanceMm) {
+  function applyBackgroundCalibration(realDistanceMm, options = {}) {
     if (!background || !backgroundCalibrationMeasurement) return null;
 
     if (!Number.isFinite(realDistanceMm) || realDistanceMm <= 0) {
       return null;
     }
 
+    const previousScaleMmPerPixel = Number.isFinite(
+      options.previousScaleMmPerPixel,
+    )
+      ? options.previousScaleMmPerPixel
+      : backgroundScaleMmPerPixel;
     const mmPerPixel = calibration?.mmPerPixel ?? 10;
     const currentBackgroundScale = background.scale ?? 1;
-    const nextBackgroundScaleMmPerPixel =
-      (realDistanceMm * currentBackgroundScale) /
+    const measuredWorldDistance =
       backgroundCalibrationMeasurement.pixelDistance;
-    const targetPixelDistance = realDistanceMm / mmPerPixel;
-    const nextScale =
-      currentBackgroundScale *
-      (targetPixelDistance / backgroundCalibrationMeasurement.pixelDistance);
+    const measuredSourceDistance =
+      measuredWorldDistance / currentBackgroundScale;
+
+    if (
+      !Number.isFinite(measuredSourceDistance) ||
+      measuredSourceDistance <= 0
+    ) {
+      return null;
+    }
+
+    const desiredWorldDistance = realDistanceMm / mmPerPixel;
+    const nextScale = desiredWorldDistance / measuredSourceDistance;
+    const nextBackgroundScaleMmPerPixel =
+      realDistanceMm / measuredSourceDistance;
 
     pushUndoSnapshot();
     setBackground((current) =>
@@ -1184,9 +1199,11 @@ function AppLayout() {
     setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(false);
+    setTemporaryTool(null);
 
     return {
-      previousScaleMmPerPixel: backgroundWorkflowRequest?.previousScaleMmPerPixel,
+      shouldShowComparison: Boolean(options.showComparison),
+      previousScaleMmPerPixel,
       newScaleMmPerPixel: nextBackgroundScaleMmPerPixel,
     };
   }

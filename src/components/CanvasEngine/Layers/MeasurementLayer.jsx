@@ -1,18 +1,13 @@
 import { Line, Text } from "react-konva";
 
-function getDistance(pointA, pointB) {
-  const dx = pointB.x - pointA.x;
-  const dy = pointB.y - pointA.y;
-
-  return Math.sqrt(dx * dx + dy * dy);
-}
+import { getWorldDistance } from "../../../measurement";
 
 function MeasurementLayer({ points }) {
   if (points.length === 0) return null;
 
   const [pointA, pointB] = points;
 
-  const distance = pointB ? getDistance(pointA, pointB) : null;
+  const distance = pointB ? getWorldDistance(pointA, pointB) : null;
 
   const labelX = pointB ? (pointA.x + pointB.x) / 2 : pointA.x + 12;
   const labelY = pointB ? (pointA.y + pointB.y) / 2 : pointA.y - 18;

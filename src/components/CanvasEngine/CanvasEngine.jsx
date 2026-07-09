@@ -14,7 +14,13 @@ import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 import WallLayer from "./Layers/WallLayer";
 
-import { DimensionLine } from "../../measurement";
+import {
+  buildWorldMeasurementPoints,
+  DimensionLine,
+  getConstrainedWorldPoint,
+  getWorldDistance,
+  measurePixelsWithCalibration,
+} from "../../measurement";
 
 import WallPreviewLayer from "./Layers/WallPreviewLayer";
 import {
@@ -36,13 +42,6 @@ import RoomLayer from "./Layers/RoomLayer";
 import RoomSnapGuideLayer from "./Layers/RoomSnapGuideLayer";
 import OpeningLayer from "./Layers/OpeningLayer";
 
-function getDistance(pointA, pointB) {
-  const dx = pointB.x - pointA.x;
-  const dy = pointB.y - pointA.y;
-
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
 function snapPointWithShift(pointA, pointB, shiftKey) {
   if (!pointA) return pointB;
 
@@ -59,51 +58,8 @@ function snapPointWithShift(pointA, pointB, shiftKey) {
     : { x: pointA.x, y: pointB.y };
 }
 
-function constrainPointToAxis(pointA, pointB, shiftKey) {
-  if (!pointA) return pointB;
-
-  const dx = pointB.x - pointA.x;
-  const dy = pointB.y - pointA.y;
-
-  if (shiftKey) {
-    return Math.abs(dx) >= Math.abs(dy)
-      ? { x: pointB.x, y: pointA.y }
-      : { x: pointA.x, y: pointB.y };
-  }
-
-  const tolerance = Math.tan((10 * Math.PI) / 180);
-  const absDx = Math.abs(dx);
-  const absDy = Math.abs(dy);
-
-  if (absDx > 0 && absDy / absDx <= tolerance) {
-    return { x: pointB.x, y: pointA.y };
-  }
-
-  if (absDy > 0 && absDx / absDy <= tolerance) {
-    return { x: pointA.x, y: pointB.y };
-  }
-
-  return pointB;
-}
-
-function buildMeasurementPoints({ points, pointer, shiftKey }) {
-  if (points.length >= 2) return [pointer];
-
-  const pointA = points[0];
-  const nextPoint =
-    points.length === 1
-      ? constrainPointToAxis(pointA, pointer, shiftKey)
-      : pointer;
-
-  return [...points, nextPoint];
-}
-
 function getMeasuredDistanceMm(pixelDistance, calibration) {
-  if (pixelDistance == null || !calibration?.mmPerPixel) {
-    return null;
-  }
-
-  return pixelDistance * calibration.mmPerPixel;
+  return measurePixelsWithCalibration(pixelDistance, calibration);
 }
 
 function getWallCenter(wall) {
@@ -186,7 +142,9 @@ function CanvasEngine({
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera } =
     useCanvasCamera();
-  const currentTool = temporaryTool ?? activeTool;
+  const currentTool = backgroundCalibrationActive
+    ? "measure"
+    : temporaryTool ?? activeTool;
   const [shiftPressed, setShiftPressed] = useState(false);
 
   const [cursor, setCursor] = useState({ x: 100, y: 100 });
@@ -275,7 +233,7 @@ function CanvasEngine({
     }
 
     if (backgroundCalibrationActive) {
-      const nextPoints = buildMeasurementPoints({
+      const nextPoints = buildWorldMeasurementPoints({
         points: backgroundCalibrationPoints,
         pointer: rawPointer,
         shiftKey: e.evt.shiftKey,
@@ -386,7 +344,7 @@ function CanvasEngine({
       return;
     }
 
-    const nextPoints = buildMeasurementPoints({
+    const nextPoints = buildWorldMeasurementPoints({
       points: currentPoints,
       pointer: rawPointer,
       shiftKey: e.evt.shiftKey,
@@ -394,7 +352,7 @@ function CanvasEngine({
 
     const pixelDistance =
       nextPoints.length === 2
-        ? getDistance(nextPoints[0], nextPoints[1])
+        ? getWorldDistance(nextPoints[0], nextPoints[1])
         : null;
 
     onMeasurementChange({
@@ -416,7 +374,7 @@ function CanvasEngine({
 
   const liveMeasurementEndPoint =
     hasLiveMeasurement && livePointA
-      ? constrainPointToAxis(livePointA, cursor, shiftPressed)
+      ? getConstrainedWorldPoint(livePointA, cursor, shiftPressed)
       : cursor;
 
   const visibleMeasurementPoints =
@@ -426,7 +384,7 @@ function CanvasEngine({
 
   const livePixelDistance =
     hasLiveMeasurement && livePointA
-      ? getDistance(livePointA, liveMeasurementEndPoint)
+      ? getWorldDistance(livePointA, liveMeasurementEndPoint)
       : null;
 
   const liveDistanceMm = getMeasuredDistanceMm(livePixelDistance, calibration);

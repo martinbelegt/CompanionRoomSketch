@@ -82,10 +82,15 @@ function RoomSketchWizard({
   function applyDistance() {
     if (!canApplyDistance) return;
 
-    const nextComparison = onApplyBackgroundCalibration(enteredDistance);
+    const isResizeWorkflow =
+      workflowRequest?.id === activeRequestId && workflowRequest.startStep === 5;
+    const nextComparison = onApplyBackgroundCalibration(enteredDistance, {
+      showComparison: isResizeWorkflow,
+      previousScaleMmPerPixel: workflowRequest?.previousScaleMmPerPixel,
+    });
     setRealDistanceMm("");
 
-    if (nextComparison?.previousScaleMmPerPixel) {
+    if (nextComparison?.shouldShowComparison) {
       setScaleComparison(nextComparison);
       setStep(10);
       return;
