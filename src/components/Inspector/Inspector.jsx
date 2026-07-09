@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import "./Inspector.css";
 
 function Inspector({
   measurement,
   calibration,
+  backgroundScaleMmPerPixel,
   onCalibrate,
   selectedFurnitureId,
   furniture,
@@ -14,10 +15,8 @@ function Inspector({
   doors = [],
   openings = [],
   background,
+  backgroundScaleCompleted,
   showFloorplan,
-  backgroundCalibrationActive,
-  backgroundRoomAlignActive,
-  backgroundCalibrationMeasurement,
   rooms = [],
   selectedRoomId,
   selectedRoomIds = [],
@@ -26,18 +25,11 @@ function Inspector({
   onToggleDoorDirection = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
-  onUpdateBackground = () => {},
-  onImportBackground = () => {},
-  onRemoveBackground = () => {},
   onToggleFloorplan = () => {},
-  onStartBackgroundCalibration = () => {},
-  onApplyBackgroundCalibration = () => {},
-  onStartBackgroundRoomAlign = () => {},
-  onSelectBackground = () => {},
+  onStartBackgroundReplaceWorkflow = () => {},
+  onStartBackgroundResizeWorkflow = () => {},
 }) {
-  const backgroundFileInputRef = useRef(null);
   const [realDistanceMm, setRealDistanceMm] = useState("");
-  const [backgroundDistanceMm, setBackgroundDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
   const [depthCm, setDepthCm] = useState("");
   const [roomLengthMm, setRoomLengthMm] = useState("");
@@ -86,23 +78,6 @@ function Inspector({
     measurement.pixelDistance && calibration?.mmPerPixel
       ? `${Math.round(measurement.pixelDistance * calibration.mmPerPixel)} mm`
       : "Nog geen meting";
-  const enteredBackgroundDistance = Number(
-    backgroundDistanceMm.replace(",", "."),
-  );
-  const hasBackgroundDistance =
-    Number.isFinite(enteredBackgroundDistance) && enteredBackgroundDistance > 0;
-  const backgroundMeasuredDistanceMm =
-    backgroundCalibrationMeasurement?.pixelDistance && calibration?.mmPerPixel
-      ? Math.round(
-          backgroundCalibrationMeasurement.pixelDistance *
-            calibration.mmPerPixel,
-        )
-      : null;
-  const backgroundDistanceDeltaMm =
-    backgroundMeasuredDistanceMm != null && hasBackgroundDistance
-      ? Math.round(enteredBackgroundDistance - backgroundMeasuredDistanceMm)
-      : null;
-
   useEffect(() => {
     if (!selectedFurniture) {
       setWidthCm("");
@@ -130,13 +105,6 @@ function Inspector({
     onCalibrate(enteredDistance);
   }
 
-  function handleSetBackgroundScale() {
-    if (!hasBackgroundDistance) return;
-
-    onApplyBackgroundCalibration(enteredBackgroundDistance);
-    setBackgroundDistanceMm("");
-  }
-
   function handleSaveFurnitureSize() {
     if (!selectedFurniture) return;
 
@@ -148,6 +116,12 @@ function Inspector({
 
   function formatDecimal(value) {
     return value.toFixed(1).replace(".", ",");
+  }
+
+  function formatScaleValue(value) {
+    if (!Number.isFinite(value)) return null;
+
+    return `${value.toFixed(3)} mm/px`;
   }
 
   function updateSelectedRoomSize(nextValues) {
@@ -184,35 +158,18 @@ function Inspector({
               <strong>{background.name ?? background.type}</strong>
             </div>
 
-            <label className="field-label">
-              Transparantie
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={Math.round((background.opacity ?? 0.5) * 100)}
-                onChange={(e) =>
-                  onUpdateBackground({
-                    opacity: Number(e.target.value) / 100,
-                  })
-                }
-              />
-            </label>
-
             <button
               className="primary-button"
-              onClick={() => backgroundFileInputRef.current?.click()}
+              onClick={onStartBackgroundResizeWorkflow}
             >
-              📂 Andere bouwtekening kiezen
+              📏 Opnieuw op maat zetten
             </button>
 
             <button
               className="primary-button"
-              onClick={() => onUpdateBackground({ locked: !background.locked })}
+              onClick={onStartBackgroundReplaceWorkflow}
             >
-              {background.locked
-                ? "Bouwtekening ontgrendelen"
-                : "Bouwtekening vastzetten"}
+              📂 Andere bouwtekening kiezen
             </button>
 
             <button className="primary-button" onClick={onToggleFloorplan}>
@@ -221,87 +178,13 @@ function Inspector({
                 : "👁 Bouwtekening tonen"}
             </button>
 
-            <button
-              className="primary-button"
-              onClick={() => {
-                onSelectBackground();
-                onStartBackgroundCalibration();
-              }}
-            >
-              📏 Afstand kiezen
-            </button>
-
-            <button
-              className="primary-button"
-              onClick={handleSetBackgroundScale}
-              disabled={!backgroundCalibrationMeasurement || !hasBackgroundDistance}
-            >
-              📏 Opnieuw op maat zetten
-            </button>
-
-            {backgroundCalibrationActive && (
-              <p className="muted">
-                Klik twee punten aan op een bekende afstand.
-              </p>
+            {backgroundScaleCompleted && backgroundScaleMmPerPixel && (
+              <div className="current-scale-reference">
+                <h4>Huidige schaal</h4>
+                <p>✓ Bouwtekening staat op maat</p>
+                <strong>{formatScaleValue(backgroundScaleMmPerPixel)}</strong>
+              </div>
             )}
-
-            {backgroundCalibrationMeasurement && (
-              <>
-                <div className="info-row">
-                  <span>Volgens huidige schaal</span>
-                  <strong>{backgroundMeasuredDistanceMm} mm</strong>
-                </div>
-
-                <label className="field-label">
-                  Bekende afstand in millimeters
-                  <input
-                    inputMode="numeric"
-                    value={backgroundDistanceMm}
-                    onChange={(e) => setBackgroundDistanceMm(e.target.value)}
-                    placeholder="Bijvoorbeeld 4074"
-                  />
-                </label>
-
-                {backgroundDistanceDeltaMm != null && (
-                  <div className="info-row">
-                    <span>Verschil</span>
-                    <strong>
-                      {backgroundDistanceDeltaMm > 0 ? "+" : ""}
-                      {backgroundDistanceDeltaMm} mm
-                    </strong>
-                  </div>
-                )}
-              </>
-            )}
-
-            {selectedRoom?.bounds && (
-              <>
-                <div className="info-row inspector-subtle-row">
-                  <span>Referentieruimte</span>
-                  <strong>{selectedRoom.name}</strong>
-                </div>
-
-                <button
-                  className="primary-button"
-                  onClick={onStartBackgroundRoomAlign}
-                >
-                  Gebruik deze ruimte als referentie
-                </button>
-
-                {backgroundRoomAlignActive && (
-                  <p className="muted">
-                    Klik in dezelfde ruimte op de bouwtekening.
-                  </p>
-                )}
-              </>
-            )}
-
-            <button
-              className="primary-button inspector-destructive-button"
-              onClick={onRemoveBackground}
-            >
-              🗑 Bouwtekening verwijderen
-            </button>
           </>
         ) : (
           <>
@@ -309,23 +192,12 @@ function Inspector({
 
             <button
               className="primary-button"
-              onClick={() => backgroundFileInputRef.current?.click()}
+              onClick={onStartBackgroundReplaceWorkflow}
             >
               📂 Andere bouwtekening kiezen
             </button>
           </>
         )}
-
-        <input
-          ref={backgroundFileInputRef}
-          type="file"
-          accept="image/svg+xml,image/png,image/jpeg,application/pdf,.svg,.png,.jpg,.jpeg,.pdf"
-          style={{ display: "none" }}
-          onChange={(e) => {
-            onImportBackground(e.target.files?.[0]);
-            e.target.value = "";
-          }}
-        />
       </section>
 
       {selectedRoom?.bounds && (

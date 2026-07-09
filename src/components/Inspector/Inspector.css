@@ -54,6 +54,30 @@
   border-top: 1px solid #e5e7eb;
 }
 
+.current-scale-reference {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  color: #475569;
+}
+
+.current-scale-reference h4 {
+  margin: 0 0 8px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.current-scale-reference p {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.current-scale-reference strong {
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .field-label {
   display: flex;
   flex-direction: column;

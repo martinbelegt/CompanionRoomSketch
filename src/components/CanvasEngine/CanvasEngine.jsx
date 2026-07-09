@@ -161,6 +161,7 @@ function CanvasEngine({
   onStartBackgroundMove,
   onUpdateBackground,
   onFinishBackgroundCalibration,
+  onBackgroundCalibrationPointCountChange,
   onFinishBackgroundRoomAlign,
   onUpdateWindowPosition,
   resetCanvasRequest,
@@ -211,8 +212,9 @@ function CanvasEngine({
   useEffect(() => {
     if (!backgroundCalibrationActive) {
       setBackgroundCalibrationPoints([]);
+      onBackgroundCalibrationPointCountChange?.(0);
     }
-  }, [backgroundCalibrationActive]);
+  }, [backgroundCalibrationActive, onBackgroundCalibrationPointCountChange]);
 
   useEffect(() => {
     function handleKeyDown(e) {
@@ -280,6 +282,7 @@ function CanvasEngine({
       });
 
       setBackgroundCalibrationPoints(nextPoints);
+      onBackgroundCalibrationPointCountChange?.(nextPoints.length);
 
       if (nextPoints.length === 2) {
         onFinishBackgroundCalibration?.(nextPoints);

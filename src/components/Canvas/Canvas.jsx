@@ -13,8 +13,14 @@ function Canvas({
   backgroundCalibrationActive,
   backgroundRoomAlignActive,
   backgroundScaleCompleted,
+  backgroundScaleMmPerPixel,
+  backgroundCalibrationMeasurement,
+  backgroundCalibrationPointCount,
   onImportBackground,
   onStartBackgroundCalibration,
+  onCancelBackgroundCalibration,
+  onApplyBackgroundCalibration,
+  backgroundWorkflowRequest,
   addWall,
   addDoor,
   addWindow,
@@ -39,6 +45,7 @@ function Canvas({
   onStartBackgroundMove,
   onUpdateBackground,
   onFinishBackgroundCalibration,
+  onBackgroundCalibrationPointCountChange,
   onFinishBackgroundRoomAlign,
   onStartDoorMove,
   onUpdateDoorPosition,
@@ -109,6 +116,9 @@ function Canvas({
           onStartBackgroundMove={onStartBackgroundMove}
           onUpdateBackground={onUpdateBackground}
           onFinishBackgroundCalibration={onFinishBackgroundCalibration}
+          onBackgroundCalibrationPointCountChange={
+            onBackgroundCalibrationPointCountChange
+          }
           onFinishBackgroundRoomAlign={onFinishBackgroundRoomAlign}
           onStartDoorMove={onStartDoorMove}
           onUpdateDoorPosition={onUpdateDoorPosition}
@@ -137,9 +147,15 @@ function Canvas({
       <RoomSketchWizard
         background={background}
         backgroundCalibrationActive={backgroundCalibrationActive}
+        backgroundCalibrationMeasurement={backgroundCalibrationMeasurement}
+        backgroundCalibrationPointCount={backgroundCalibrationPointCount}
+        backgroundScaleMmPerPixel={backgroundScaleMmPerPixel}
         backgroundScaleCompleted={backgroundScaleCompleted}
         onImportBackground={onImportBackground}
         onStartBackgroundCalibration={onStartBackgroundCalibration}
+        onCancelBackgroundCalibration={onCancelBackgroundCalibration}
+        onApplyBackgroundCalibration={onApplyBackgroundCalibration}
+        workflowRequest={backgroundWorkflowRequest}
         onSelectTool={onSelectTool}
       />
     </div>

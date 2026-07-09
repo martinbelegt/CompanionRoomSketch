@@ -16,7 +16,9 @@
 }
 
 .roomsketch-wizard.is-measuring-step {
-  top: 40%;
+  top: 18%;
+  width: min(340px, calc(100% - 28px));
+  padding: 16px;
 }
 
 .roomsketch-wizard h2 {
@@ -58,6 +60,11 @@
   font-weight: 800;
 }
 
+.roomsketch-wizard-button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 @media (max-height: 680px), (max-width: 760px) {
   .roomsketch-wizard {
     top: 46%;
@@ -67,7 +74,7 @@
   }
 
   .roomsketch-wizard.is-measuring-step {
-    top: 34%;
+    top: 18%;
   }
 
   .roomsketch-wizard h2 {
@@ -93,6 +100,23 @@
   background: #dbeed6;
 }
 
+.roomsketch-wizard-back-button {
+  display: block;
+  width: auto;
+  margin: 14px auto 0;
+  border: none;
+  background: transparent;
+  color: #41644c;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.roomsketch-wizard-back-button:hover {
+  color: #1f5c31;
+  text-decoration: underline;
+}
+
 .roomsketch-wizard-tip {
   display: grid;
   gap: 8px;
@@ -114,4 +138,57 @@
   background: #eef5eb;
   color: #1f5c31;
   font-weight: 800;
+}
+
+.roomsketch-wizard-field {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 4px;
+  color: #36453a;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.roomsketch-wizard-field input {
+  width: 100%;
+  border: 1px solid #a9c8a1;
+  border-radius: 8px;
+  background: #f4faf2;
+  padding: 11px 12px;
+  color: #1f2a24;
+  font-size: 16px;
+}
+
+.roomsketch-wizard-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f4faf2;
+  color: #1f5c31;
+  font-weight: 700;
+}
+
+.roomsketch-scale-comparison {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 14px;
+  margin: 14px 0;
+  color: #4b5b50;
+  font-size: 14px;
+}
+
+.roomsketch-scale-comparison strong {
+  color: #1f2a24;
+  font-weight: 800;
+}
+
+.roomsketch-scale-arrow {
+  grid-column: 1 / -1;
+  color: #6b7a70;
+  text-align: center;
+}
+
+.roomsketch-scale-interpretation {
+  margin-top: 12px;
+  font-weight: 700;
 }

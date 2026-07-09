@@ -93,6 +93,8 @@ function createEmptyProjectState() {
     openings: [],
     background: null,
     calibration: null,
+    backgroundScaleCompleted: false,
+    backgroundScaleMmPerPixel: null,
     showFloorplan: true,
     showWallDimensions: true,
     myFurniture: loadFromStorage(STORAGE_KEYS.myFurniture, []),
@@ -535,6 +537,12 @@ function AppLayout() {
     useState(false);
   const [backgroundCalibrationMeasurement, setBackgroundCalibrationMeasurement] =
     useState(null);
+  const [backgroundCalibrationPointCount, setBackgroundCalibrationPointCount] =
+    useState(0);
+  const [backgroundWorkflowRequest, setBackgroundWorkflowRequest] =
+    useState(null);
+  const [backgroundScaleMmPerPixel, setBackgroundScaleMmPerPixel] =
+    useState(null);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -784,6 +792,8 @@ function AppLayout() {
         openings,
         background,
         calibration,
+        backgroundScaleCompleted,
+        backgroundScaleMmPerPixel,
         showFloorplan,
         showWallDimensions,
         myFurniture,
@@ -812,7 +822,9 @@ function AppLayout() {
     setBackgroundCalibrationActive(false);
     setBackgroundRoomAlignActive(false);
     setBackgroundScaleCompleted(false);
+    setBackgroundScaleMmPerPixel(null);
     setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibrationPointCount(0);
     setSelectedFurnitureId(null);
     setActiveTool("select");
     setPendingFurniture(null);
@@ -829,6 +841,7 @@ function AppLayout() {
   }
 
   function applyProjectState(projectState) {
+    resetTransientState();
     setFurniture(projectState.furniture ?? []);
     setRooms(projectState.rooms ?? []);
     setWalls(projectState.walls ?? []);
@@ -837,10 +850,13 @@ function AppLayout() {
     setOpenings(projectState.openings ?? []);
     setBackground(projectState.background ?? null);
     setCalibration(projectState.calibration ?? null);
+    setBackgroundScaleCompleted(projectState.backgroundScaleCompleted ?? false);
+    setBackgroundScaleMmPerPixel(
+      projectState.backgroundScaleMmPerPixel ?? null,
+    );
     setShowFloorplan(projectState.showFloorplan ?? true);
     setShowWallDimensions(projectState.showWallDimensions ?? true);
     setMyFurniture(projectState.myFurniture ?? []);
-    resetTransientState();
   }
 
   function continueSavedProject() {
@@ -872,6 +888,8 @@ function AppLayout() {
     openings,
     background,
     calibration,
+    backgroundScaleCompleted,
+    backgroundScaleMmPerPixel,
     showFloorplan,
     showWallDimensions,
     myFurniture,
@@ -953,6 +971,7 @@ function AppLayout() {
           name: file.name,
         });
         setBackgroundScaleCompleted(false);
+        setBackgroundScaleMmPerPixel(null);
         setSelectedObject({ type: "background", id: "background" });
       } catch {
         window.alert("Deze PDF kan niet worden geopend.");
@@ -978,6 +997,7 @@ function AppLayout() {
         name: file.name,
       });
       setBackgroundScaleCompleted(false);
+      setBackgroundScaleMmPerPixel(null);
       setSelectedObject({ type: "background", id: "background" });
     };
 
@@ -1011,7 +1031,9 @@ function AppLayout() {
     pushUndoSnapshot();
     setBackground(null);
     setBackgroundScaleCompleted(false);
+    setBackgroundScaleMmPerPixel(null);
     setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(false);
     setBackgroundRoomAlignActive(false);
     setSelectedObject(null);
@@ -1021,10 +1043,49 @@ function AppLayout() {
     if (!background) return;
 
     setShowFloorplan(true);
+    setBackground((current) =>
+      current
+        ? {
+            ...current,
+            visible: true,
+          }
+        : current,
+    );
     setSelectedObject({ type: "background", id: "background" });
     setBackgroundRoomAlignActive(false);
     setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(true);
+  }
+
+  function cancelBackgroundCalibration() {
+    setBackgroundCalibrationActive(false);
+    setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibrationPointCount(0);
+  }
+
+  function startBackgroundWorkflow(startStep) {
+    cancelBackgroundCalibration();
+    setShowFloorplan(true);
+
+    if (background) {
+      setBackground((current) =>
+        current
+          ? {
+              ...current,
+              visible: true,
+            }
+          : current,
+      );
+      setSelectedObject({ type: "background", id: "background" });
+    }
+
+    setBackgroundWorkflowRequest({
+      id: crypto.randomUUID(),
+      startStep,
+      previousScaleMmPerPixel:
+        startStep === 5 ? backgroundScaleMmPerPixel : null,
+    });
   }
 
   function getSingleSelectedRoom() {
@@ -1089,19 +1150,24 @@ function AppLayout() {
       points,
       pixelDistance,
     });
+    setBackgroundCalibrationPointCount(points.length);
   }
 
   function applyBackgroundCalibration(realDistanceMm) {
-    if (!background || !backgroundCalibrationMeasurement) return;
+    if (!background || !backgroundCalibrationMeasurement) return null;
 
     if (!Number.isFinite(realDistanceMm) || realDistanceMm <= 0) {
-      return;
+      return null;
     }
 
     const mmPerPixel = calibration?.mmPerPixel ?? 10;
+    const currentBackgroundScale = background.scale ?? 1;
+    const nextBackgroundScaleMmPerPixel =
+      (realDistanceMm * currentBackgroundScale) /
+      backgroundCalibrationMeasurement.pixelDistance;
     const targetPixelDistance = realDistanceMm / mmPerPixel;
     const nextScale =
-      (background.scale ?? 1) *
+      currentBackgroundScale *
       (targetPixelDistance / backgroundCalibrationMeasurement.pixelDistance);
 
     pushUndoSnapshot();
@@ -1114,8 +1180,15 @@ function AppLayout() {
         : current,
     );
     setBackgroundScaleCompleted(true);
+    setBackgroundScaleMmPerPixel(nextBackgroundScaleMmPerPixel);
     setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(false);
+
+    return {
+      previousScaleMmPerPixel: backgroundWorkflowRequest?.previousScaleMmPerPixel,
+      newScaleMmPerPixel: nextBackgroundScaleMmPerPixel,
+    };
   }
 
   function addFurniture(catalogId) {
@@ -2273,8 +2346,14 @@ function AppLayout() {
           backgroundCalibrationActive={backgroundCalibrationActive}
           backgroundRoomAlignActive={backgroundRoomAlignActive}
           backgroundScaleCompleted={backgroundScaleCompleted}
+          backgroundScaleMmPerPixel={backgroundScaleMmPerPixel}
+          backgroundCalibrationMeasurement={backgroundCalibrationMeasurement}
+          backgroundCalibrationPointCount={backgroundCalibrationPointCount}
           onImportBackground={importBackground}
           onStartBackgroundCalibration={startBackgroundCalibration}
+          onCancelBackgroundCalibration={cancelBackgroundCalibration}
+          onApplyBackgroundCalibration={applyBackgroundCalibration}
+          backgroundWorkflowRequest={backgroundWorkflowRequest}
           addWall={addWall}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
@@ -2301,6 +2380,9 @@ function AppLayout() {
           onStartBackgroundMove={startBackgroundMove}
           onUpdateBackground={updateBackground}
           onFinishBackgroundCalibration={finishBackgroundCalibration}
+          onBackgroundCalibrationPointCountChange={
+            setBackgroundCalibrationPointCount
+          }
           onFinishBackgroundRoomAlign={finishBackgroundRoomAlign}
           windows={windows}
           addWindow={addWindow}
@@ -2327,6 +2409,7 @@ function AppLayout() {
         <Inspector
           measurement={measurement}
           calibration={calibration}
+          backgroundScaleMmPerPixel={backgroundScaleMmPerPixel}
           onCalibrate={calibrate}
           selectedFurnitureId={selectedFurnitureId}
           furniture={furniture}
@@ -2356,10 +2439,20 @@ function AppLayout() {
           onStartBackgroundCalibration={startBackgroundCalibration}
           onApplyBackgroundCalibration={applyBackgroundCalibration}
           onStartBackgroundRoomAlign={startBackgroundRoomAlign}
+          onStartBackgroundReplaceWorkflow={() => startBackgroundWorkflow(2)}
+          onStartBackgroundResizeWorkflow={() => startBackgroundWorkflow(5)}
           onSelectBackground={() => {
             if (!background) return;
 
             setShowFloorplan(true);
+            setBackground((current) =>
+              current
+                ? {
+                    ...current,
+                    visible: true,
+                  }
+                : current,
+            );
             setSelectedObject({ type: "background", id: "background" });
           }}
         />
