@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import "./Inspector.css";
 
@@ -14,7 +14,7 @@ function Inspector({
   doors = [],
   openings = [],
   background,
-  backgroundScaleCompleted,
+  showFloorplan,
   backgroundCalibrationActive,
   backgroundRoomAlignActive,
   backgroundCalibrationMeasurement,
@@ -27,11 +27,15 @@ function Inspector({
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
   onUpdateBackground = () => {},
+  onImportBackground = () => {},
   onRemoveBackground = () => {},
+  onToggleFloorplan = () => {},
   onStartBackgroundCalibration = () => {},
   onApplyBackgroundCalibration = () => {},
   onStartBackgroundRoomAlign = () => {},
+  onSelectBackground = () => {},
 }) {
+  const backgroundFileInputRef = useRef(null);
   const [realDistanceMm, setRealDistanceMm] = useState("");
   const [backgroundDistanceMm, setBackgroundDistanceMm] = useState("");
   const [widthCm, setWidthCm] = useState("");
@@ -50,22 +54,11 @@ function Inspector({
     selectedObject?.type === "opening"
       ? openings.find((opening) => opening.id === selectedObject.id)
       : null;
-  const showBackgroundForOnboarding = Boolean(
-    background && !backgroundScaleCompleted,
-  );
-  const selectedBackground =
-    selectedObject?.type === "background" || showBackgroundForOnboarding
-      ? background
-      : null;
   const selectedRoomIdsForReference = selectedRoomIds.length
     ? selectedRoomIds
     : selectedRoomId
       ? [selectedRoomId]
       : [];
-  const selectedReferenceRoom =
-    selectedRoomIdsForReference.length === 1
-      ? rooms.find((room) => room.id === selectedRoomIdsForReference[0])
-      : null;
   const selectedRoom =
     selectedRoomIdsForReference.length === 1
       ? rooms.find((room) => room.id === selectedRoomIdsForReference[0])
@@ -93,6 +86,22 @@ function Inspector({
     measurement.pixelDistance && calibration?.mmPerPixel
       ? `${Math.round(measurement.pixelDistance * calibration.mmPerPixel)} mm`
       : "Nog geen meting";
+  const enteredBackgroundDistance = Number(
+    backgroundDistanceMm.replace(",", "."),
+  );
+  const hasBackgroundDistance =
+    Number.isFinite(enteredBackgroundDistance) && enteredBackgroundDistance > 0;
+  const backgroundMeasuredDistanceMm =
+    backgroundCalibrationMeasurement?.pixelDistance && calibration?.mmPerPixel
+      ? Math.round(
+          backgroundCalibrationMeasurement.pixelDistance *
+            calibration.mmPerPixel,
+        )
+      : null;
+  const backgroundDistanceDeltaMm =
+    backgroundMeasuredDistanceMm != null && hasBackgroundDistance
+      ? Math.round(enteredBackgroundDistance - backgroundMeasuredDistanceMm)
+      : null;
 
   useEffect(() => {
     if (!selectedFurniture) {
@@ -122,11 +131,9 @@ function Inspector({
   }
 
   function handleSetBackgroundScale() {
-    const distanceMm = Number(backgroundDistanceMm.replace(",", "."));
+    if (!hasBackgroundDistance) return;
 
-    if (!Number.isFinite(distanceMm) || distanceMm <= 0) return;
-
-    onApplyBackgroundCalibration(distanceMm);
+    onApplyBackgroundCalibration(enteredBackgroundDistance);
     setBackgroundDistanceMm("");
   }
 
@@ -163,24 +170,6 @@ function Inspector({
     });
   }
 
-  if (
-    !background &&
-    !selectedRoom?.bounds &&
-    !selectedFurniture &&
-    !selectedDoor &&
-    !selectedOpening
-  ) {
-    return (
-      <aside className="inspector">
-        <h2>Eigenschappen</h2>
-
-        <section className="inspector-section">
-          <p className="muted">Volg eerst de Coach om te beginnen.</p>
-        </section>
-      </aside>
-    );
-  }
-
   return (
     <aside className="inspector">
       <h2>Eigenschappen</h2>
@@ -188,11 +177,11 @@ function Inspector({
       <section className="inspector-section">
         <h3>Bouwtekening</h3>
 
-        {selectedBackground ? (
+        {background ? (
           <>
             <div className="info-row">
               <span>Bestand</span>
-              <strong>{selectedBackground.name ?? selectedBackground.type}</strong>
+              <strong>{background.name ?? background.type}</strong>
             </div>
 
             <label className="field-label">
@@ -201,7 +190,7 @@ function Inspector({
                 type="range"
                 min="0"
                 max="100"
-                value={Math.round((selectedBackground.opacity ?? 0.5) * 100)}
+                value={Math.round((background.opacity ?? 0.5) * 100)}
                 onChange={(e) =>
                   onUpdateBackground({
                     opacity: Number(e.target.value) / 100,
@@ -212,26 +201,59 @@ function Inspector({
 
             <button
               className="primary-button"
-              onClick={onStartBackgroundCalibration}
+              onClick={() => backgroundFileInputRef.current?.click()}
             >
-              Afstand kiezen
+              📂 Andere bouwtekening kiezen
+            </button>
+
+            <button
+              className="primary-button"
+              onClick={() => onUpdateBackground({ locked: !background.locked })}
+            >
+              {background.locked
+                ? "Bouwtekening ontgrendelen"
+                : "Bouwtekening vastzetten"}
+            </button>
+
+            <button className="primary-button" onClick={onToggleFloorplan}>
+              {showFloorplan
+                ? "👁 Bouwtekening verbergen"
+                : "👁 Bouwtekening tonen"}
+            </button>
+
+            <button
+              className="primary-button"
+              onClick={() => {
+                onSelectBackground();
+                onStartBackgroundCalibration();
+              }}
+            >
+              📏 Afstand kiezen
+            </button>
+
+            <button
+              className="primary-button"
+              onClick={handleSetBackgroundScale}
+              disabled={!backgroundCalibrationMeasurement || !hasBackgroundDistance}
+            >
+              📏 Opnieuw op maat zetten
             </button>
 
             {backgroundCalibrationActive && (
               <p className="muted">
-                Klik de binnenkant van twee tegenoverliggende muren aan.
+                Klik twee punten aan op een bekende afstand.
               </p>
             )}
 
             {backgroundCalibrationMeasurement && (
               <>
                 <div className="info-row">
-                  <span>Gekozen lijn</span>
-                  <strong>gemeten</strong>
+                  <span>Volgens huidige schaal</span>
+                  <strong>{backgroundMeasuredDistanceMm} mm</strong>
                 </div>
 
                 <label className="field-label">
-                  Werkelijke afstand in millimeters
+                  Bekende afstand in millimeters
                   <input
                     inputMode="numeric"
                     value={backgroundDistanceMm}
@@ -240,62 +262,70 @@ function Inspector({
                   />
                 </label>
 
+                {backgroundDistanceDeltaMm != null && (
+                  <div className="info-row">
+                    <span>Verschil</span>
+                    <strong>
+                      {backgroundDistanceDeltaMm > 0 ? "+" : ""}
+                      {backgroundDistanceDeltaMm} mm
+                    </strong>
+                  </div>
+                )}
+              </>
+            )}
+
+            {selectedRoom?.bounds && (
+              <>
+                <div className="info-row inspector-subtle-row">
+                  <span>Referentieruimte</span>
+                  <strong>{selectedRoom.name}</strong>
+                </div>
+
                 <button
                   className="primary-button"
-                  onClick={handleSetBackgroundScale}
-                  disabled={
-                    !Number.isFinite(
-                      Number(backgroundDistanceMm.replace(",", ".")),
-                    ) || Number(backgroundDistanceMm.replace(",", ".")) <= 0
-                  }
+                  onClick={onStartBackgroundRoomAlign}
                 >
-                  Zet bouwtekening op maat
+                  Gebruik deze ruimte als referentie
                 </button>
+
+                {backgroundRoomAlignActive && (
+                  <p className="muted">
+                    Klik in dezelfde ruimte op de bouwtekening.
+                  </p>
+                )}
               </>
             )}
 
             <button
-              className="primary-button"
-              onClick={() =>
-                onUpdateBackground({ locked: !selectedBackground.locked })
-              }
+              className="primary-button inspector-destructive-button"
+              onClick={onRemoveBackground}
             >
-              {selectedBackground.locked
-                ? "Ontgrendel bouwtekening"
-                : "Bouwtekening vastzetten"}
-            </button>
-
-            <button className="danger-button" onClick={onRemoveBackground}>
-              Bouwtekening verwijderen
+              🗑 Bouwtekening verwijderen
             </button>
           </>
-        ) : background && selectedReferenceRoom?.bounds ? (
+        ) : (
           <>
-            <div className="info-row">
-              <span>Referentie</span>
-              <strong>{selectedReferenceRoom.name}</strong>
-            </div>
+            <p className="muted">Importeer eerst een bouwtekening.</p>
 
             <button
               className="primary-button"
-              onClick={onStartBackgroundRoomAlign}
+              onClick={() => backgroundFileInputRef.current?.click()}
             >
-              Gebruik deze ruimte als referentie
+              📂 Andere bouwtekening kiezen
             </button>
-
-            {backgroundRoomAlignActive && (
-              <p className="muted">
-                Klik in dezelfde ruimte op de bouwtekening.
-              </p>
-            )}
           </>
-        ) : background ? (
-          <p className="muted">
-            Selecteer de bouwtekening of een ruimte om verder uit te lijnen.
-          </p>
-        ) : (
-          <p className="muted">Importeer eerst een bouwtekening.</p>
         )}
+
+        <input
+          ref={backgroundFileInputRef}
+          type="file"
+          accept="image/svg+xml,image/png,image/jpeg,application/pdf,.svg,.png,.jpg,.jpeg,.pdf"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            onImportBackground(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
       </section>
 
       {selectedRoom?.bounds && (

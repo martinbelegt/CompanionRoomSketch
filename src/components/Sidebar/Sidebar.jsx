@@ -78,16 +78,12 @@ function Sidebar({
   onResetCanvasView,
   showWallDimensions,
   onToggleWallDimensions,
-  showFloorplan,
-  onToggleFloorplan,
-  background,
-  onImportBackground,
-  onSelectBackground,
   onStartRoomDraft,
   onUnlockAllRooms,
   roomDraftWallIds = [],
   onSaveRoomDraft,
   onStartOpening,
+  onSaveProject,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
@@ -227,36 +223,13 @@ function Sidebar({
           Alle ruimtes ontgrendelen
         </button>
 
-        <button className="sidebar-button" onClick={onToggleFloorplan}>
-          {showFloorplan
-            ? "Bouwtekening verbergen"
-            : "Bouwtekening tonen"}
-        </button>
-
-        <label className="sidebar-button">
-          Bouwtekening importeren
-          <input
-            type="file"
-            accept="image/svg+xml,image/png,image/jpeg,application/pdf,.svg,.png,.jpg,.jpeg,.pdf"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              onImportBackground(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
-
-        {background && (
-          <button className="sidebar-button" onClick={onSelectBackground}>
-            Bouwtekening bewerken
-          </button>
-        )}
-
         <button className="sidebar-button" onClick={onClearWalls}>
           🗑 Wis alle muren
         </button>
 
-        <button className="sidebar-button">💾 Opslaan</button>
+        <button className="sidebar-button" onClick={onSaveProject}>
+          💾 Opslaan
+        </button>
       </div>
 
       <div className="sidebar-card sidebar-card-green">

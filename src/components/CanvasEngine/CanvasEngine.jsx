@@ -6,7 +6,7 @@ import { Stage, Layer, Rect } from "react-konva";
 import useCanvasSize from "../../hooks/useCanvasSize";
 import useCanvasCamera from "./Hooks/useCanvasCamera";
 
-import CursorLayer from "./Layers/CursorLayer";
+import PrecisionCursorLayer from "./Layers/PrecisionCursorLayer";
 import FurnitureLayer from "./Layers/FurnitureLayer";
 import FloorplanLayer from "./Layers/FloorplanLayer";
 import BackgroundLayer from "./Layers/BackgroundLayer";
@@ -496,7 +496,10 @@ function CanvasEngine({
   }
 
   return (
-    <div className="canvas-engine" ref={containerRef}>
+    <div
+      className={`canvas-engine ${isMeasuring ? "is-precision-mode" : ""}`}
+      ref={containerRef}
+    >
       <Stage
         width={width}
         height={height}
@@ -646,7 +649,7 @@ function CanvasEngine({
           )}
 
           {isMeasuring && (
-            <CursorLayer cursor={cursor} onMove={setCursor} />
+            <PrecisionCursorLayer cursor={cursor} />
           )}
           {marqueeStart && marqueeEnd && (
             <Rect

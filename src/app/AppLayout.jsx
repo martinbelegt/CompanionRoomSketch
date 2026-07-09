@@ -22,6 +22,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const STORAGE_KEYS = {
+  project: "companion-roomsketch-project",
   furniture: "companion-roomsketch-placed-furniture",
   calibration: "companion-roomsketch-calibration",
   myFurniture: "companion-roomsketch-my-furniture",
@@ -35,6 +36,8 @@ const STORAGE_KEYS = {
 };
 
 const SNAP_DISTANCE = 20;
+const PROJECT_TITLE = "Appartement Hank";
+const PROJECT_SAVE_VERSION = 1;
 const EMPTY_BULK_SELECTION = {
   roomIds: [],
   wallIds: [],
@@ -44,8 +47,56 @@ const EMPTY_BULK_SELECTION = {
 };
 
 function loadFromStorage(key, fallback) {
-  const saved = localStorage.getItem(key);
-  return saved ? JSON.parse(saved) : fallback;
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // LocalStorage can be full or unavailable; keep the app usable.
+  }
+}
+
+function getSavedProject() {
+  return loadFromStorage(STORAGE_KEYS.project, null);
+}
+
+function hasMeaningfulSavedProject(project) {
+  if (!project?.data) return false;
+
+  const data = project.data;
+
+  return Boolean(
+    data.walls?.length ||
+      data.rooms?.length ||
+      data.doors?.length ||
+      data.windows?.length ||
+      data.openings?.length ||
+      data.furniture?.length ||
+      data.background ||
+      data.calibration,
+  );
+}
+
+function createEmptyProjectState() {
+  return {
+    furniture: [],
+    walls: [],
+    doors: [],
+    windows: [],
+    openings: [],
+    background: null,
+    calibration: null,
+    showFloorplan: true,
+    showWallDimensions: true,
+    myFurniture: loadFromStorage(STORAGE_KEYS.myFurniture, []),
+  };
 }
 
 function cloneCanvasState(snapshot) {
@@ -439,44 +490,34 @@ function getOpeningFillDirection(wall, opening, rooms) {
 }
 
 function AppLayout() {
-  const [furniture, setFurniture] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.furniture, []),
+  const [savedProject] = useState(() => getSavedProject());
+  const [showRestorePrompt, setShowRestorePrompt] = useState(() =>
+    hasMeaningfulSavedProject(savedProject),
   );
+  const [manualSaveVisible, setManualSaveVisible] = useState(false);
 
-  const [walls, setWalls] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.walls, []),
-  );
+  const [furniture, setFurniture] = useState([]);
 
-  const [doors, setDoors] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.doors, []),
-  );
+  const [walls, setWalls] = useState([]);
 
-  const [windows, setWindows] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.windows, []),
-  );
+  const [doors, setDoors] = useState([]);
 
-  const [openings, setOpenings] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.openings, []),
-  );
+  const [windows, setWindows] = useState([]);
 
-  const [background, setBackground] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.background, null),
-  );
+  const [openings, setOpenings] = useState([]);
+
+  const [background, setBackground] = useState(null);
 
   const [selectedWallId, setSelectedWallId] = useState(null);
 
   const [selectedObject, setSelectedObject] = useState(null);
 
   const [showWallDimensions, setShowWallDimensions] = useState(true);
-  const [showFloorplan, setShowFloorplan] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.showFloorplan, true),
-  );
+  const [showFloorplan, setShowFloorplan] = useState(true);
 
   const [resetCanvasRequest, setResetCanvasRequest] = useState(0);
 
-  const [rooms, setRooms] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.rooms, []),
-  );
+  const [rooms, setRooms] = useState([]);
 
   const [selectedRoomId, setSelectedRoomId] = useState(null);
 
@@ -716,9 +757,7 @@ function AppLayout() {
     distanceMm: null,
   });
 
-  const [calibration, setCalibration] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.calibration, null),
-  );
+  const [calibration, setCalibration] = useState(null);
 
   const [temporaryTool, setTemporaryTool] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -731,38 +770,152 @@ function AppLayout() {
     loadFromStorage(STORAGE_KEYS.myFurniture, []),
   );
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.furniture, JSON.stringify(furniture));
-  }, [furniture]);
+  function getProjectSnapshot() {
+    return {
+      version: PROJECT_SAVE_VERSION,
+      projectTitle: PROJECT_TITLE,
+      savedAt: new Date().toISOString(),
+      data: {
+        furniture,
+        rooms,
+        walls,
+        doors,
+        windows,
+        openings,
+        background,
+        calibration,
+        showFloorplan,
+        showWallDimensions,
+        myFurniture,
+      },
+    };
+  }
+
+  function saveProjectSnapshot({ showConfirmation = false } = {}) {
+    saveToStorage(STORAGE_KEYS.project, getProjectSnapshot());
+    saveToStorage(STORAGE_KEYS.myFurniture, myFurniture);
+
+    if (showConfirmation) {
+      setManualSaveVisible(true);
+    }
+  }
+
+  function resetTransientState() {
+    setSelectedWallId(null);
+    setSelectedObject(null);
+    setSelectedRoomId(null);
+    setSelectedRoomIds([]);
+    setRoomDraftWallIds([]);
+    setUndoStack([]);
+    setActiveSnapGuides([]);
+    setBulkSelection(EMPTY_BULK_SELECTION);
+    setBackgroundCalibrationActive(false);
+    setBackgroundRoomAlignActive(false);
+    setBackgroundScaleCompleted(false);
+    setBackgroundCalibrationMeasurement(null);
+    setSelectedFurnitureId(null);
+    setActiveTool("select");
+    setPendingFurniture(null);
+    setPendingOpening(null);
+    setMeasurement({
+      points: [],
+      pixelDistance: null,
+      distanceMm: null,
+    });
+    setTemporaryTool(null);
+    setDialogOpen(false);
+    setRectangleRoomDialogOpen(false);
+    setOpeningDialogOpen(false);
+  }
+
+  function applyProjectState(projectState) {
+    setFurniture(projectState.furniture ?? []);
+    setRooms(projectState.rooms ?? []);
+    setWalls(projectState.walls ?? []);
+    setDoors(projectState.doors ?? []);
+    setWindows(projectState.windows ?? []);
+    setOpenings(projectState.openings ?? []);
+    setBackground(projectState.background ?? null);
+    setCalibration(projectState.calibration ?? null);
+    setShowFloorplan(projectState.showFloorplan ?? true);
+    setShowWallDimensions(projectState.showWallDimensions ?? true);
+    setMyFurniture(projectState.myFurniture ?? []);
+    resetTransientState();
+  }
+
+  function continueSavedProject() {
+    applyProjectState(savedProject?.data ?? createEmptyProjectState());
+    setShowRestorePrompt(false);
+  }
+
+  function startNewProject() {
+    applyProjectState(createEmptyProjectState());
+    setShowRestorePrompt(false);
+  }
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.walls, JSON.stringify(walls));
-  }, [walls]);
+    if (showRestorePrompt) return;
+
+    const saveTimer = window.setTimeout(() => {
+      saveProjectSnapshot();
+    }, 250);
+
+    return () => {
+      window.clearTimeout(saveTimer);
+    };
+  }, [
+    furniture,
+    rooms,
+    walls,
+    doors,
+    windows,
+    openings,
+    background,
+    calibration,
+    showFloorplan,
+    showWallDimensions,
+    myFurniture,
+    showRestorePrompt,
+  ]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.doors, JSON.stringify(doors));
-  }, [doors]);
+    if (!manualSaveVisible) return;
+
+    const messageTimer = window.setTimeout(() => {
+      setManualSaveVisible(false);
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(messageTimer);
+    };
+  }, [manualSaveVisible]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.windows, JSON.stringify(windows));
-  }, [windows]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.rooms, JSON.stringify(rooms));
-  }, [rooms]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.openings, JSON.stringify(openings));
-  }, [openings]);
-
-  useEffect(() => {
-    if (!background) {
-      localStorage.removeItem(STORAGE_KEYS.background);
+    if (showRestorePrompt) {
       return;
     }
 
-    localStorage.setItem(STORAGE_KEYS.background, JSON.stringify(background));
-  }, [background]);
+    saveToStorage(STORAGE_KEYS.furniture, furniture);
+    saveToStorage(STORAGE_KEYS.walls, walls);
+    saveToStorage(STORAGE_KEYS.doors, doors);
+    saveToStorage(STORAGE_KEYS.windows, windows);
+    saveToStorage(STORAGE_KEYS.rooms, rooms);
+    saveToStorage(STORAGE_KEYS.openings, openings);
+    saveToStorage(STORAGE_KEYS.background, background);
+    saveToStorage(STORAGE_KEYS.calibration, calibration);
+    saveToStorage(STORAGE_KEYS.showFloorplan, showFloorplan);
+  }, [
+    furniture,
+    walls,
+    doors,
+    windows,
+    rooms,
+    openings,
+    background,
+    calibration,
+    showFloorplan,
+    showRestorePrompt,
+  ]);
 
   async function importBackground(file) {
     if (!file) return;
@@ -867,6 +1020,7 @@ function AppLayout() {
   function startBackgroundCalibration() {
     if (!background) return;
 
+    setShowFloorplan(true);
     setSelectedObject({ type: "background", id: "background" });
     setBackgroundRoomAlignActive(false);
     setBackgroundCalibrationMeasurement(null);
@@ -964,13 +1118,6 @@ function AppLayout() {
     setBackgroundCalibrationActive(false);
   }
 
-  useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEYS.showFloorplan,
-      JSON.stringify(showFloorplan),
-    );
-  }, [showFloorplan]);
-
   function addFurniture(catalogId) {
     const template =
       furnitureCatalog[catalogId] ??
@@ -986,7 +1133,7 @@ function AppLayout() {
     setMyFurniture((current) => {
       const next = [...current, item];
 
-      localStorage.setItem(STORAGE_KEYS.myFurniture, JSON.stringify(next));
+      saveToStorage(STORAGE_KEYS.myFurniture, next);
 
       return next;
     });
@@ -1037,7 +1184,7 @@ function AppLayout() {
     setMyFurniture((current) => {
       const next = current.filter((item) => item.id !== id);
 
-      localStorage.setItem(STORAGE_KEYS.myFurniture, JSON.stringify(next));
+      saveToStorage(STORAGE_KEYS.myFurniture, next);
 
       return next;
     });
@@ -1127,10 +1274,7 @@ function AppLayout() {
 
     setCalibration(nextCalibration);
 
-    localStorage.setItem(
-      STORAGE_KEYS.calibration,
-      JSON.stringify(nextCalibration),
-    );
+    saveToStorage(STORAGE_KEYS.calibration, nextCalibration);
   }
 
   function deleteSelectedObjects(selection, options = {}) {
@@ -2111,19 +2255,13 @@ function AppLayout() {
           onResetCanvasView={resetCanvasView}
           showWallDimensions={showWallDimensions}
           onToggleWallDimensions={toggleWallDimensions}
-          showFloorplan={showFloorplan}
-          onToggleFloorplan={toggleFloorplan}
-          background={background}
-          onImportBackground={importBackground}
-          onSelectBackground={() =>
-            setSelectedObject({ type: "background", id: "background" })
-          }
           onStartRoomDraft={startRoomDraft}
           onUnlockAllRooms={unlockAllRooms}
           roomDraftWallIds={roomDraftWallIds}
           onSaveRoomDraft={saveRoomDraft}
           onCreate={createRectangleRoom}
           onStartOpening={startOpeningWorkflow}
+          onSaveProject={() => saveProjectSnapshot({ showConfirmation: true })}
         />
 
         <Canvas
@@ -2198,6 +2336,8 @@ function AppLayout() {
           doors={doors}
           openings={openings}
           background={background}
+          backgroundScaleCompleted={backgroundScaleCompleted}
+          showFloorplan={showFloorplan}
           backgroundCalibrationActive={backgroundCalibrationActive}
           backgroundRoomAlignActive={backgroundRoomAlignActive}
           backgroundCalibrationMeasurement={backgroundCalibrationMeasurement}
@@ -2210,14 +2350,49 @@ function AppLayout() {
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}
           onUpdateBackground={updateBackground}
+          onImportBackground={importBackground}
           onRemoveBackground={removeBackground}
+          onToggleFloorplan={toggleFloorplan}
           onStartBackgroundCalibration={startBackgroundCalibration}
           onApplyBackgroundCalibration={applyBackgroundCalibration}
           onStartBackgroundRoomAlign={startBackgroundRoomAlign}
+          onSelectBackground={() => {
+            if (!background) return;
+
+            setShowFloorplan(true);
+            setSelectedObject({ type: "background", id: "background" });
+          }}
         />
       </main>
 
       <StatusBar />
+
+      {manualSaveVisible && (
+        <div className="save-toast" role="status" aria-live="polite">
+          ✓ Project opgeslagen
+        </div>
+      )}
+
+      {showRestorePrompt && (
+        <div className="restore-overlay" role="dialog" aria-modal="true">
+          <section className="restore-card" aria-labelledby="restore-title">
+            <h2 id="restore-title">👋 Welkom terug!</h2>
+            <p>Je was bezig met:</p>
+            <strong>{savedProject?.projectTitle ?? PROJECT_TITLE}</strong>
+            <div className="restore-actions">
+              <button
+                className="restore-button restore-button-primary"
+                onClick={continueSavedProject}
+              >
+                Verdergaan
+              </button>
+              <button className="restore-button" onClick={startNewProject}>
+                Nieuw project
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <NewFurnitureDialog
         open={dialogOpen}

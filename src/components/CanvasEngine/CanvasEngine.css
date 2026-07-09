@@ -7,6 +7,11 @@
   background: #eef2f7;
 }
 
+.canvas-engine.is-precision-mode,
+.canvas-engine.is-precision-mode .konvajs-content {
+  cursor: none;
+}
+
 .konvajs-content {
   display: block;
 
