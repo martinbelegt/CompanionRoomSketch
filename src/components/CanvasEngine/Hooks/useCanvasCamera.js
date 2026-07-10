@@ -6,8 +6,25 @@ const DEFAULT_CAMERA = {
   scale: 1,
 };
 
-export default function useCanvasCamera() {
-  const [camera, setCamera] = useState(DEFAULT_CAMERA);
+function getValidCamera(camera) {
+  if (
+    !camera ||
+    !Number.isFinite(camera.x) ||
+    !Number.isFinite(camera.y) ||
+    !Number.isFinite(camera.scale)
+  ) {
+    return DEFAULT_CAMERA;
+  }
+
+  return {
+    x: camera.x,
+    y: camera.y,
+    scale: Math.min(4, Math.max(0.25, camera.scale)),
+  };
+}
+
+export default function useCanvasCamera(initialCamera = DEFAULT_CAMERA) {
+  const [camera, setCamera] = useState(() => getValidCamera(initialCamera));
 
   const zoomAtPointer = useCallback((stage, event) => {
     event.evt.preventDefault();
@@ -45,10 +62,15 @@ export default function useCanvasCamera() {
     setCamera(DEFAULT_CAMERA);
   }, []);
 
+  const restoreCamera = useCallback((nextCamera) => {
+    setCamera(getValidCamera(nextCamera));
+  }, []);
+
   return {
     camera,
     zoomAtPointer,
     updatePosition,
     resetCamera,
+    restoreCamera,
   };
 }

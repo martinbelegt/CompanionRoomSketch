@@ -14,8 +14,8 @@ function WallPreviewLayer({ startPoint, endPoint }) {
       stroke={PREVIEW_COLOR}
       strokeWidth={PREVIEW_WIDTH}
       dash={[12, 8]}
-      lineCap="round"
-      lineJoin="round"
+      lineCap="butt"
+      lineJoin="miter"
       listening={false}
     />
   );

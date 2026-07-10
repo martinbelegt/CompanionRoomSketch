@@ -1,77 +1,12 @@
 import { useState } from "react";
 
+import furnitureCatalog, {
+  furnitureCategories,
+} from "../../data/furnitureCatalog";
 import "./Sidebar.css";
-
-const starterFurnitureGroups = [
-  {
-    id: "living",
-    title: "🛋 Woonkamer",
-    items: [
-      { id: "sofa", label: "🛋 Bank" },
-      { id: "corner-sofa", label: "🛋 Hoekbank" },
-      { id: "coffee-table", label: "☕ Salontafel" },
-      { id: "tv-cabinet", label: "📺 TV-meubel" },
-      { id: "bookcase", label: "📚 Boekenkast" },
-      { id: "armchair", label: "🪑 Fauteuil" },
-    ],
-  },
-  {
-    id: "dining",
-    title: "🍽 Eetkamer",
-    items: [
-      { id: "dining-table", label: "🍽 Eettafel" },
-      { id: "dining-chair", label: "🪑 Stoel" },
-      { id: "sideboard", label: "🗄 Buffetkast" },
-    ],
-  },
-  {
-    id: "kitchen",
-    title: "🍳 Keuken",
-    items: [
-      { id: "kitchen-cabinet", label: "🍳 Keukenkast" },
-      { id: "kitchen-island", label: "⬜ Kookeiland" },
-      { id: "fridge", label: "🧊 Koelkast" },
-      { id: "tall-cabinet", label: "🗄 Hoge kast" },
-    ],
-  },
-  {
-    id: "bedroom",
-    title: "🛏 Slaapkamer",
-    items: [
-      { id: "bed", label: "🛏 Bed" },
-      { id: "nightstand", label: "🛏 Nachtkastje" },
-      { id: "wardrobe", label: "👕 Kledingkast" },
-      { id: "desk", label: "🖥 Bureau" },
-    ],
-  },
-  {
-    id: "bathroom",
-    title: "🚿 Badkamer",
-    items: [
-      { id: "sink", label: "🚰 Wastafel" },
-      { id: "shower", label: "🚿 Douche" },
-      { id: "bathtub", label: "🛁 Bad" },
-      { id: "toilet", label: "🚽 Toilet" },
-      { id: "mirror-cabinet", label: "🪞 Spiegelkast" },
-    ],
-  },
-  {
-    id: "other",
-    title: "📦 Overig",
-    items: [
-      { id: "washing-machine", label: "🧺 Wasmachine" },
-      { id: "dryer", label: "🧺 Droger" },
-      { id: "storage-cabinet", label: "🗄 Kast" },
-      { id: "shelf", label: "📏 Plank" },
-    ],
-  },
-];
 
 function Sidebar({
   onAddFurniture,
-  myFurniture,
-  onDeleteMyFurniture,
-  onNewFurniture,
   activeTool,
   onSelectTool,
   onClearWalls,
@@ -84,13 +19,15 @@ function Sidebar({
   onSaveRoomDraft,
   onStartOpening,
   onSaveProject,
+  onRestoreSavedProject,
+  canRestoreSavedProject = false,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
-  const [myFurnitureOpen, setMyFurnitureOpen] = useState(true);
   const [openGroups, setOpenGroups] = useState({
     living: true,
-    bedroom: true,
-    bathroom: true,
+    dining: true,
+    bedroom: false,
+    bathroom: false,
   });
 
   function toggleGroup(id) {
@@ -151,7 +88,7 @@ function Sidebar({
           style={getToolButtonStyle("wall")}
           onClick={() => toggleTool("wall")}
         >
-          🧱 Muren tekenen
+          Muren tekenen
           <br />
           <small>(Klik • Klik • Shift = recht)</small>
         </button>
@@ -161,7 +98,7 @@ function Sidebar({
           style={getToolButtonStyle("room")}
           onClick={onStartRoomDraft}
         >
-          🏠 Ruimte maken
+          Ruimte maken
           <br />
           <small>Klik de muren van één ruimte aan</small>
         </button>
@@ -196,7 +133,7 @@ function Sidebar({
           style={getToolButtonStyle("opening")}
           onClick={onStartOpening}
         >
-          ⬜ Open doorgang
+          Open doorgang
           <br />
           <small>Maak een doorgang in een muur</small>
         </button>
@@ -206,17 +143,17 @@ function Sidebar({
           style={getToolButtonStyle("window")}
           onClick={() => toggleTool("window")}
         >
-          🪟 Ramen plaatsen
+          Ramen plaatsen
           <br />
           <small>(Klik op een muur)</small>
         </button>
 
         <button className="sidebar-button" onClick={onResetCanvasView}>
-          🎯 Terug naar beginstand
+          Terug naar beginstand
         </button>
 
         <button className="sidebar-button" onClick={onToggleWallDimensions}>
-          {showWallDimensions ? "📐 Maten verbergen" : "📐 Maten tonen"}
+          {showWallDimensions ? "Maten verbergen" : "Maten tonen"}
         </button>
 
         <button className="sidebar-button" onClick={onUnlockAllRooms}>
@@ -224,78 +161,61 @@ function Sidebar({
         </button>
 
         <button className="sidebar-button" onClick={onClearWalls}>
-          🗑 Wis alle muren
+          Wis alle muren
         </button>
 
         <button className="sidebar-button" onClick={onSaveProject}>
-          💾 Opslaan
+          Opslaan
+        </button>
+        <button
+          className="sidebar-button"
+          onClick={onRestoreSavedProject}
+          disabled={!canRestoreSavedProject}
+        >
+          Terug naar laatste opslag
         </button>
       </div>
 
       <div className="sidebar-card sidebar-card-green">
         <button
-          className="sidebar-button"
+          className="sidebar-button sidebar-library-toggle"
           onClick={() => setFurnitureOpen((open) => !open)}
         >
-          {furnitureOpen ? "▾" : "▸"} 🟩 Meubels toevoegen
+          {furnitureOpen ? "▾" : "▸"} Meubels toevoegen
         </button>
 
         {furnitureOpen &&
-          starterFurnitureGroups.map((group) => (
+          furnitureCategories.map((group) => (
             <div key={group.id} className="sidebar-category">
               <button
-                className="sidebar-button"
+                className="sidebar-button sidebar-category-button"
                 onClick={() => toggleGroup(group.id)}
               >
-                {openGroups[group.id] ? "▾" : "▸"} {group.title} (
-                {group.items.length})
+                <span>
+                  {openGroups[group.id] ? "▾" : "▸"} {group.icon}{" "}
+                  {group.title}
+                </span>
+                <span className="sidebar-count">{group.items.length}</span>
               </button>
 
               {openGroups[group.id] &&
-                group.items.map((item) => (
-                  <button
-                    key={item.id}
-                    className="sidebar-button sidebar-nested-button"
-                    onClick={() => onAddFurniture(item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                group.items.map((catalogId) => {
+                  const item = furnitureCatalog[catalogId];
+
+                  if (!item) return null;
+
+                  return (
+                    <button
+                      key={catalogId}
+                      className="sidebar-button sidebar-furniture-pick"
+                      onClick={() => onAddFurniture(catalogId)}
+                    >
+                      {item.name}
+                    </button>
+                  );
+                })}
             </div>
           ))}
-      </div>
-
-      <div className="sidebar-card sidebar-card-pink">
-        <button
-          className="sidebar-button"
-          onClick={() => setMyFurnitureOpen((open) => !open)}
-        >
-          {myFurnitureOpen ? "▾" : "▸"} ❤️ Mijn meubels
-        </button>
-
-        {myFurnitureOpen &&
-          myFurniture.map((item) => (
-            <div key={item.id} className="sidebar-furniture-row">
-              <button
-                className="sidebar-button sidebar-furniture-button"
-                onClick={() => onAddFurniture(item.id)}
-              >
-                🧩 {item.name}
-              </button>
-
-              <button
-                className="sidebar-delete-button"
-                onClick={() => onDeleteMyFurniture(item.id)}
-                title="Verwijder uit mijn meubels"
-              >
-                ×
-              </button>
-            </div>
-          ))}
-
-        <button className="sidebar-button" onClick={onNewFurniture}>
-          ✨ Maak eigen meubel
-        </button>
       </div>
     </aside>
   );

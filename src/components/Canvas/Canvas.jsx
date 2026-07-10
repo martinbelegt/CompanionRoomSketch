@@ -51,6 +51,9 @@ function Canvas({
   onUpdateDoorPosition,
   onUpdateWindowPosition,
   resetCanvasRequest,
+  canvasCamera,
+  canvasCameraRestoreRequest,
+  onCanvasCameraChange,
   showWallDimensions,
   showFloorplan,
   onMoveWall,
@@ -124,6 +127,9 @@ function Canvas({
           onUpdateDoorPosition={onUpdateDoorPosition}
           onUpdateWindowPosition={onUpdateWindowPosition}
           resetCanvasRequest={resetCanvasRequest}
+          canvasCamera={canvasCamera}
+          canvasCameraRestoreRequest={canvasCameraRestoreRequest}
+          onCanvasCameraChange={onCanvasCameraChange}
           showWallDimensions={showWallDimensions}
           showFloorplan={showFloorplan}
           onMoveWall={onMoveWall}

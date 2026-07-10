@@ -1,8 +1,12 @@
-export function createWall(startPoint, endPoint) {
+export const DEFAULT_WALL_THICKNESS_MM = 100;
+
+export function createWall(startPoint, endPoint, options = {}) {
   return {
     id: crypto.randomUUID(),
     startPoint,
     endPoint,
+    thicknessMm: options.thicknessMm ?? DEFAULT_WALL_THICKNESS_MM,
+    color: options.color,
   };
 }
 

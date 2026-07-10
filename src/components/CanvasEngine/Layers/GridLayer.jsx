@@ -2,7 +2,9 @@ import { Line } from "react-konva";
 
 const DEFAULT_MM_PER_PIXEL = 10;
 const MINOR_GRID_MM = 100;
-const MAJOR_GRID_MM = 1000;
+const MAJOR_GRID_MM = 500;
+const MINOR_GRID_STROKE = "rgba(96, 165, 250, 0.22)";
+const MAJOR_GRID_STROKE = "rgba(59, 130, 246, 0.38)";
 
 function createGridLines({ start, end, step }) {
   const first = Math.floor(start / step) * step;
@@ -43,8 +45,8 @@ function GridLayer({ calibration, visibleBounds }) {
           <Line
             key={`v-${x}`}
             points={[x, top, x, bottom]}
-            stroke={major ? "rgba(37, 99, 235, 0.24)" : "rgba(100, 116, 139, 0.14)"}
-            strokeWidth={major ? 1.2 : 0.8}
+            stroke={major ? MAJOR_GRID_STROKE : MINOR_GRID_STROKE}
+            strokeWidth={major ? 1.1 : 0.7}
             strokeScaleEnabled={false}
             listening={false}
           />
@@ -58,8 +60,8 @@ function GridLayer({ calibration, visibleBounds }) {
           <Line
             key={`h-${y}`}
             points={[left, y, right, y]}
-            stroke={major ? "rgba(37, 99, 235, 0.24)" : "rgba(100, 116, 139, 0.14)"}
-            strokeWidth={major ? 1.2 : 0.8}
+            stroke={major ? MAJOR_GRID_STROKE : MINOR_GRID_STROKE}
+            strokeWidth={major ? 1.1 : 0.7}
             strokeScaleEnabled={false}
             listening={false}
           />

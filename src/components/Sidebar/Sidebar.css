@@ -8,7 +8,7 @@
 }
 
 .sidebar-card {
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
@@ -39,7 +39,7 @@
   border: none;
   background: white;
   padding: 9px 10px;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   text-align: left;
   font-size: 13px;
@@ -63,9 +63,15 @@
   text-align: left;
 }
 
-.sidebar-button.disabled {
+.sidebar-button.disabled,
+.sidebar-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.sidebar-button:disabled:hover {
+  transform: none;
+  background: white;
 }
 
 .sidebar-furniture-row {
@@ -119,9 +125,36 @@
   margin-top: 6px;
 }
 
-.sidebar-nested-button {
-  margin-left: 10px;
-  width: calc(100% - 10px);
+.sidebar-library-toggle {
+  font-weight: 800;
+}
+
+.sidebar-category-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.sidebar-count {
+  min-width: 24px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  text-align: center;
+}
+
+.sidebar-furniture-pick {
+  margin-top: 4px;
+  margin-left: 14px;
+  width: calc(100% - 14px);
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+  box-shadow: none;
 }
 
 .sidebar-primary-button {

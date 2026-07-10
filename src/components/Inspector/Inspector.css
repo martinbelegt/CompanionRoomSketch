@@ -94,6 +94,26 @@
   font-size: 15px;
 }
 
+.color-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-field input[type="color"] {
+  width: 48px;
+  height: 36px;
+  padding: 3px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.color-field span {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .primary-button {
   width: 100%;
   margin-top: 8px;
@@ -104,6 +124,27 @@
   color: white;
   cursor: pointer;
   font-weight: 700;
+}
+
+.secondary-button {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #334155;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.secondary-button:hover {
+  background: #f8fafc;
+}
+
+.inspector-button-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .primary-button:disabled {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 
 import Toolbar from "../components/Toolbar/Toolbar";
@@ -23,6 +23,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 const STORAGE_KEYS = {
   project: "companion-roomsketch-project",
+  manualProject: "companion-roomsketch-manual-project",
   furniture: "companion-roomsketch-placed-furniture",
   calibration: "companion-roomsketch-calibration",
   myFurniture: "companion-roomsketch-my-furniture",
@@ -38,6 +39,11 @@ const STORAGE_KEYS = {
 const SNAP_DISTANCE = 20;
 const PROJECT_TITLE = "Appartement Hank";
 const PROJECT_SAVE_VERSION = 1;
+const DEFAULT_CANVAS_CAMERA = {
+  x: 0,
+  y: 0,
+  scale: 1,
+};
 const EMPTY_BULK_SELECTION = {
   roomIds: [],
   wallIds: [],
@@ -97,6 +103,7 @@ function createEmptyProjectState() {
     backgroundScaleMmPerPixel: null,
     showFloorplan: true,
     showWallDimensions: true,
+    canvasCamera: DEFAULT_CANVAS_CAMERA,
     myFurniture: loadFromStorage(STORAGE_KEYS.myFurniture, []),
   };
 }
@@ -493,6 +500,9 @@ function getOpeningFillDirection(wall, opening, rooms) {
 
 function AppLayout() {
   const [savedProject] = useState(() => getSavedProject());
+  const [manualSavedProject, setManualSavedProject] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.manualProject, null),
+  );
   const [showRestorePrompt, setShowRestorePrompt] = useState(() =>
     hasMeaningfulSavedProject(savedProject),
   );
@@ -518,6 +528,22 @@ function AppLayout() {
   const [showFloorplan, setShowFloorplan] = useState(true);
 
   const [resetCanvasRequest, setResetCanvasRequest] = useState(0);
+  const [canvasCamera, setCanvasCamera] = useState(DEFAULT_CANVAS_CAMERA);
+  const [canvasCameraRestoreRequest, setCanvasCameraRestoreRequest] =
+    useState(0);
+  const updateCanvasCamera = useCallback((nextCamera) => {
+    setCanvasCamera((current) => {
+      if (
+        current.x === nextCamera.x &&
+        current.y === nextCamera.y &&
+        current.scale === nextCamera.scale
+      ) {
+        return current;
+      }
+
+      return nextCamera;
+    });
+  }, []);
 
   const [rooms, setRooms] = useState([]);
 
@@ -527,6 +553,7 @@ function AppLayout() {
 
   const [roomDraftWallIds, setRoomDraftWallIds] = useState([]);
   const [undoStack, setUndoStack] = useState([]);
+  const [redoStack, setRedoStack] = useState([]);
   const [activeSnapGuides, setActiveSnapGuides] = useState([]);
   const [bulkSelection, setBulkSelection] = useState(EMPTY_BULK_SELECTION);
   const [backgroundCalibrationActive, setBackgroundCalibrationActive] =
@@ -560,6 +587,7 @@ function AppLayout() {
     const snapshot = captureUndoState();
 
     setUndoStack((current) => [...current, snapshot].slice(-30));
+    setRedoStack([]);
   }
 
   function restoreUndoState(snapshot) {
@@ -586,13 +614,30 @@ function AppLayout() {
 
     if (!snapshot) return;
 
+    setRedoStack((current) => [...current, captureUndoState()].slice(-30));
     restoreUndoState(snapshot);
     setUndoStack((current) => current.slice(0, -1));
+  }
+
+  function redoLastCanvasChange() {
+    const snapshot = redoStack[redoStack.length - 1];
+
+    if (!snapshot) return;
+
+    setUndoStack((current) => [...current, captureUndoState()].slice(-30));
+    restoreUndoState(snapshot);
+    setRedoStack((current) => current.slice(0, -1));
   }
 
   function addWall(wall) {
     pushUndoSnapshot();
     setWalls((current) => [...current, wall]);
+    setSelectedWallId(wall.id);
+    setSelectedObject(null);
+    setSelectedRoomId(null);
+    setSelectedRoomIds([]);
+    setSelectedFurnitureId(null);
+    setBulkSelection(EMPTY_BULK_SELECTION);
   }
   function addDoor(door) {
     pushUndoSnapshot();
@@ -722,6 +767,8 @@ function AppLayout() {
   }
 
   function resetCanvasView() {
+    setCanvasCamera(DEFAULT_CANVAS_CAMERA);
+    setCanvasCameraRestoreRequest((current) => current + 1);
     setResetCanvasRequest((current) => current + 1);
   }
 
@@ -751,6 +798,9 @@ function AppLayout() {
 
   const [pendingFurniture, setPendingFurniture] = useState(null);
   const [pendingOpening, setPendingOpening] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [rectangleRoomDialogOpen, setRectangleRoomDialogOpen] = useState(false);
+  const [openingDialogOpen, setOpeningDialogOpen] = useState(false);
 
   useEffect(() => {
     if (activeTool === "rectangleRoom") {
@@ -768,11 +818,6 @@ function AppLayout() {
   const [calibration, setCalibration] = useState(null);
 
   const [temporaryTool, setTemporaryTool] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const [rectangleRoomDialogOpen, setRectangleRoomDialogOpen] = useState(false);
-
-  const [openingDialogOpen, setOpeningDialogOpen] = useState(false);
 
   const [myFurniture, setMyFurniture] = useState(() =>
     loadFromStorage(STORAGE_KEYS.myFurniture, []),
@@ -796,16 +841,21 @@ function AppLayout() {
         backgroundScaleMmPerPixel,
         showFloorplan,
         showWallDimensions,
+        canvasCamera,
         myFurniture,
       },
     };
   }
 
   function saveProjectSnapshot({ showConfirmation = false } = {}) {
-    saveToStorage(STORAGE_KEYS.project, getProjectSnapshot());
+    const snapshot = getProjectSnapshot();
+
+    saveToStorage(STORAGE_KEYS.project, snapshot);
     saveToStorage(STORAGE_KEYS.myFurniture, myFurniture);
 
     if (showConfirmation) {
+      saveToStorage(STORAGE_KEYS.manualProject, snapshot);
+      setManualSavedProject(snapshot);
       setManualSaveVisible(true);
     }
   }
@@ -817,6 +867,7 @@ function AppLayout() {
     setSelectedRoomIds([]);
     setRoomDraftWallIds([]);
     setUndoStack([]);
+    setRedoStack([]);
     setActiveSnapGuides([]);
     setBulkSelection(EMPTY_BULK_SELECTION);
     setBackgroundCalibrationActive(false);
@@ -856,6 +907,8 @@ function AppLayout() {
     );
     setShowFloorplan(projectState.showFloorplan ?? true);
     setShowWallDimensions(projectState.showWallDimensions ?? true);
+    setCanvasCamera(projectState.canvasCamera ?? DEFAULT_CANVAS_CAMERA);
+    setCanvasCameraRestoreRequest((current) => current + 1);
     setMyFurniture(projectState.myFurniture ?? []);
   }
 
@@ -866,6 +919,23 @@ function AppLayout() {
 
   function startNewProject() {
     applyProjectState(createEmptyProjectState());
+    setShowRestorePrompt(false);
+  }
+
+  function restoreManualSavedProject() {
+    const latestManualProject =
+      loadFromStorage(STORAGE_KEYS.manualProject, null) ?? manualSavedProject;
+
+    if (!hasMeaningfulSavedProject(latestManualProject)) return;
+
+    const shouldRestore = window.confirm(
+      "Terug naar de laatste handmatige opslag? Je huidige wijzigingen worden vervangen.",
+    );
+
+    if (!shouldRestore) return;
+
+    applyProjectState(latestManualProject.data);
+    setManualSavedProject(latestManualProject);
     setShowRestorePrompt(false);
   }
 
@@ -892,6 +962,7 @@ function AppLayout() {
     backgroundScaleMmPerPixel,
     showFloorplan,
     showWallDimensions,
+    canvasCamera,
     myFurniture,
     showRestorePrompt,
   ]);
@@ -1234,11 +1305,16 @@ function AppLayout() {
 
     pushUndoSnapshot();
 
+    const mmPerPixel = calibration?.mmPerPixel ?? 10;
+    const width = pendingFurniture.widthMm / mmPerPixel;
+    const height = pendingFurniture.depthMm / mmPerPixel;
+
     const newItem = {
       id: crypto.randomUUID(),
       ...pendingFurniture,
-      x: position.x,
-      y: position.y,
+      x: position.x - width / 2,
+      y: position.y - height / 2,
+      rotation: pendingFurniture.rotation ?? 0,
     };
 
     setFurniture((current) => [...current, newItem]);
@@ -1640,10 +1716,24 @@ function AppLayout() {
   }
 
   function updateFurnitureSize(id, size) {
+    const widthMm = Number(size.widthMm);
+    const depthMm = Number(size.depthMm);
+
+    if (!Number.isFinite(widthMm) || !Number.isFinite(depthMm)) return;
+    if (widthMm <= 0 || depthMm <= 0) return;
+
     pushUndoSnapshot();
 
     setFurniture((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...size } : item)),
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              widthMm: Math.max(300, widthMm),
+              depthMm: Math.max(300, depthMm),
+            }
+          : item,
+      ),
     );
   }
 
@@ -2045,14 +2135,123 @@ function AppLayout() {
     );
   }
 
+  function updateRectangleRoomWalls(roomId, wallStyle) {
+    const room = rooms.find((item) => item.id === roomId);
+
+    if (!room?.wallIds?.length) return;
+
+    const nextThicknessMm =
+      wallStyle.thicknessMm == null ? null : Number(wallStyle.thicknessMm);
+    const nextColor = wallStyle.color;
+    const nextUpdates = {};
+
+    if (Number.isFinite(nextThicknessMm) && nextThicknessMm > 0) {
+      nextUpdates.thicknessMm = nextThicknessMm;
+    }
+
+    if (typeof nextColor === "string" && nextColor.trim()) {
+      nextUpdates.color = nextColor;
+    }
+
+    if (!Object.keys(nextUpdates).length) return;
+
+    pushUndoSnapshot();
+
+    setWalls((current) =>
+      current.map((wall) =>
+        room.wallIds.includes(wall.id)
+          ? {
+              ...wall,
+              ...nextUpdates,
+            }
+          : wall,
+      ),
+    );
+  }
+
+  function updateWallSize(id, sizeMm) {
+    const wall = walls.find((item) => item.id === id);
+
+    if (!wall) return;
+
+    const nextLengthMm = Number(sizeMm.lengthMm);
+    const nextThicknessMm = Number(sizeMm.thicknessMm);
+    const nextColor = sizeMm.color;
+    const mmPerPixel = calibration?.mmPerPixel ?? 10;
+    const dx = wall.endPoint.x - wall.startPoint.x;
+    const dy = wall.endPoint.y - wall.startPoint.y;
+    const currentLengthPx = Math.sqrt(dx * dx + dy * dy);
+
+    if (!currentLengthPx) return;
+
+    const nextUpdates = {};
+
+    if (Number.isFinite(nextLengthMm) && nextLengthMm > 0) {
+      const nextLengthPx = nextLengthMm / mmPerPixel;
+
+      nextUpdates.endPoint = {
+        x: wall.startPoint.x + (dx / currentLengthPx) * nextLengthPx,
+        y: wall.startPoint.y + (dy / currentLengthPx) * nextLengthPx,
+      };
+    }
+
+    if (Number.isFinite(nextThicknessMm) && nextThicknessMm > 0) {
+      nextUpdates.thicknessMm = nextThicknessMm;
+    }
+
+    if (typeof nextColor === "string" && nextColor.trim()) {
+      nextUpdates.color = nextColor;
+    }
+
+    if (!Object.keys(nextUpdates).length) return;
+
+    pushUndoSnapshot();
+
+    setWalls((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              ...nextUpdates,
+            }
+          : item,
+      ),
+    );
+  }
+
+  function rotateFurniture(id, rotation) {
+    const nextRotation = Number(rotation);
+
+    if (!Number.isFinite(nextRotation)) return;
+
+    pushUndoSnapshot();
+
+    setFurniture((current) =>
+      current.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              rotation: ((nextRotation % 360) + 360) % 360,
+            }
+          : item,
+      ),
+    );
+  }
+
   function selectRoom(id, addToSelection = false) {
     const room = rooms.find((item) => item.id === id);
 
-    if (room?.locked) return;
+    if (!room) return;
 
     setSelectedWallId(null);
     setSelectedObject(null);
     setBulkSelection(EMPTY_BULK_SELECTION);
+
+    if (room.locked) {
+      setSelectedRoomId(id);
+      setSelectedRoomIds([id]);
+      return;
+    }
 
     if (addToSelection) {
       setSelectedRoomIds((current) => {
@@ -2073,7 +2272,7 @@ function AppLayout() {
 
   function selectRoomByWallId(wallId) {
     const room = rooms.find(
-      (item) => !item.locked && item.wallIds.includes(wallId),
+      (item) => item.wallIds.includes(wallId),
     );
 
     if (!room) {
@@ -2166,9 +2365,21 @@ function AppLayout() {
       if (e.repeat) return;
       const isEditingText = isTextEditingTarget(e.target);
 
+      if (e.ctrlKey && e.code === "KeyZ" && e.shiftKey) {
+        e.preventDefault();
+        redoLastCanvasChange();
+        return;
+      }
+
       if (e.ctrlKey && e.code === "KeyZ") {
         e.preventDefault();
         undoLastCanvasChange();
+        return;
+      }
+
+      if (e.ctrlKey && e.code === "KeyY") {
+        e.preventDefault();
+        redoLastCanvasChange();
         return;
       }
 
@@ -2215,6 +2426,29 @@ function AppLayout() {
         (e.code === "Delete" || e.code === "Backspace") &&
         isEditingText
       ) {
+        return;
+      }
+
+      if (
+        selectedFurnitureId &&
+        e.code === "KeyR" &&
+        !isEditingText &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        const selectedFurniture = furniture.find(
+          (item) => item.id === selectedFurnitureId,
+        );
+
+        if (selectedFurniture) {
+          e.preventDefault();
+          rotateFurniture(
+            selectedFurniture.id,
+            (selectedFurniture.rotation ?? 0) + (e.shiftKey ? -15 : 15),
+          );
+        }
+
         return;
       }
 
@@ -2275,6 +2509,10 @@ function AppLayout() {
 
         // Eerst: geselecteerde ruimte
         if (selectedRoomId) {
+          const selectedRoom = rooms.find((room) => room.id === selectedRoomId);
+
+          if (selectedRoom?.locked) return;
+
           let delta = { x: 0, y: 0 };
 
           if (e.code === "ArrowUp") delta = { x: 0, y: -step };
@@ -2283,6 +2521,18 @@ function AppLayout() {
           if (e.code === "ArrowRight") delta = { x: step, y: 0 };
 
           moveRoom(selectedRoomId, delta);
+          return;
+        }
+
+        if (selectedWallId) {
+          let delta = { x: 0, y: 0 };
+
+          if (e.code === "ArrowUp") delta = { x: 0, y: -step };
+          if (e.code === "ArrowDown") delta = { x: 0, y: step };
+          if (e.code === "ArrowLeft") delta = { x: -step, y: 0 };
+          if (e.code === "ArrowRight") delta = { x: step, y: 0 };
+
+          moveWall(selectedWallId, delta);
           return;
         }
 
@@ -2326,7 +2576,9 @@ function AppLayout() {
     selectedRoomId,
     selectedRoomIds,
     rooms,
+    furniture,
     undoStack,
+    redoStack,
   ]);
 
   return (
@@ -2352,6 +2604,8 @@ function AppLayout() {
           onCreate={createRectangleRoom}
           onStartOpening={startOpeningWorkflow}
           onSaveProject={() => saveProjectSnapshot({ showConfirmation: true })}
+          onRestoreSavedProject={restoreManualSavedProject}
+          canRestoreSavedProject={hasMeaningfulSavedProject(manualSavedProject)}
         />
 
         <Canvas
@@ -2405,6 +2659,9 @@ function AppLayout() {
           addWindow={addWindow}
           onUpdateWindowPosition={updateWindowPosition}
           resetCanvasRequest={resetCanvasRequest}
+          canvasCamera={canvasCamera}
+          canvasCameraRestoreRequest={canvasCameraRestoreRequest}
+          onCanvasCameraChange={updateCanvasCamera}
           showWallDimensions={showWallDimensions}
           showFloorplan={showFloorplan}
           rooms={rooms}
@@ -2431,7 +2688,11 @@ function AppLayout() {
           selectedFurnitureId={selectedFurnitureId}
           furniture={furniture}
           onUpdateFurnitureSize={updateFurnitureSize}
+          onUpdateFurnitureRotation={rotateFurniture}
           onDeleteSelectedFurniture={deleteSelectedFurniture}
+          selectedWallId={selectedWallId}
+          walls={walls}
+          onUpdateWallSize={updateWallSize}
           selectedObject={selectedObject}
           doors={doors}
           openings={openings}
@@ -2445,6 +2706,7 @@ function AppLayout() {
           selectedRoomId={selectedRoomId}
           selectedRoomIds={selectedRoomIds}
           onUpdateRectangleRoomSize={updateRectangleRoomSize}
+          onUpdateRectangleRoomWalls={updateRectangleRoomWalls}
           onSetRoomLocked={setRoomLocked}
           onToggleDoorDirection={toggleDoorDirection}
           onConvertOpeningToDoor={convertOpeningToDoor}

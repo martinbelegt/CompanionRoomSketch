@@ -10,6 +10,7 @@ import PrecisionCursorLayer from "./Layers/PrecisionCursorLayer";
 import FurnitureLayer from "./Layers/FurnitureLayer";
 import FloorplanLayer from "./Layers/FloorplanLayer";
 import BackgroundLayer from "./Layers/BackgroundLayer";
+import GridLayer from "./Layers/GridLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 import WallLayer from "./Layers/WallLayer";
@@ -41,22 +42,6 @@ import { createWindow } from "../../windows/windowUtils";
 import RoomLayer from "./Layers/RoomLayer";
 import RoomSnapGuideLayer from "./Layers/RoomSnapGuideLayer";
 import OpeningLayer from "./Layers/OpeningLayer";
-
-function snapPointWithShift(pointA, pointB, shiftKey) {
-  if (!pointA) return pointB;
-
-  // Shift = vrije richting
-  if (shiftKey) {
-    return pointB;
-  }
-
-  const dx = pointB.x - pointA.x;
-  const dy = pointB.y - pointA.y;
-
-  return Math.abs(dx) >= Math.abs(dy)
-    ? { x: pointB.x, y: pointA.y }
-    : { x: pointA.x, y: pointB.y };
-}
 
 function getMeasuredDistanceMm(pixelDistance, calibration) {
   return measurePixelsWithCalibration(pixelDistance, calibration);
@@ -121,6 +106,9 @@ function CanvasEngine({
   onFinishBackgroundRoomAlign,
   onUpdateWindowPosition,
   resetCanvasRequest,
+  canvasCamera,
+  canvasCameraRestoreRequest,
+  onCanvasCameraChange,
   showWallDimensions,
   showFloorplan,
   onMoveWall,
@@ -140,11 +128,24 @@ function CanvasEngine({
   onSelectOpeningWall,
 }) {
   const { containerRef, width, height } = useCanvasSize();
-  const { camera, zoomAtPointer, updatePosition, resetCamera } =
-    useCanvasCamera();
-  const currentTool = backgroundCalibrationActive
-    ? "measure"
-    : temporaryTool ?? activeTool;
+  const { camera, zoomAtPointer, updatePosition, resetCamera, restoreCamera } =
+    useCanvasCamera(canvasCamera);
+  const currentTool =
+    temporaryTool === "pan"
+      ? "pan"
+      : backgroundCalibrationActive
+        ? "measure"
+        : temporaryTool ?? activeTool;
+  const visibleBounds =
+    camera.scale > 0
+      ? {
+          x: -camera.x / camera.scale,
+          y: -camera.y / camera.scale,
+          width: width / camera.scale,
+          height: height / camera.scale,
+        }
+      : null;
+  const isPanning = currentTool === "pan";
   const [shiftPressed, setShiftPressed] = useState(false);
 
   const [cursor, setCursor] = useState({ x: 100, y: 100 });
@@ -166,6 +167,15 @@ function CanvasEngine({
     if (!resetCanvasRequest) return;
     resetCamera();
   }, [resetCanvasRequest, resetCamera]);
+
+  useEffect(() => {
+    if (!canvasCameraRestoreRequest) return;
+    restoreCamera(canvasCamera);
+  }, [canvasCamera, canvasCameraRestoreRequest, restoreCamera]);
+
+  useEffect(() => {
+    onCanvasCameraChange?.(camera);
+  }, [camera, onCanvasCameraChange]);
 
   useEffect(() => {
     if (!backgroundCalibrationActive) {
@@ -213,6 +223,8 @@ function CanvasEngine({
 
     if (!pointer) return;
 
+    if (isPanning) return;
+
     setCursor(pointer);
 
     if (isMarqueeDragging) {
@@ -226,6 +238,8 @@ function CanvasEngine({
     const rawPointer = getWorldPointer(stage);
 
     if (!rawPointer) return;
+
+    if (isPanning) return;
 
     if (backgroundRoomAlignActive) {
       onFinishBackgroundRoomAlign?.(rawPointer);
@@ -270,11 +284,6 @@ function CanvasEngine({
 
     setCursor(rawPointer);
 
-    if (currentTool === "wall" && selectedWallId && !wallStartPoint) {
-      onSelectWall(null);
-      return;
-    }
-
     if (currentTool === "wall") {
       if (!wallStartPoint) {
         setWallStartPoint(snapToWallEndpoints(rawPointer, walls));
@@ -283,10 +292,10 @@ function CanvasEngine({
 
       const snappedPoint = snapToWallEndpoints(rawPointer, walls);
 
-      const endPoint = snapPointWithShift(
+      const endPoint = getConstrainedWorldPoint(
         wallStartPoint,
         snappedPoint,
-        e.evt.shiftKey,
+        true,
       );
 
       let finalEndPoint = endPoint;
@@ -367,7 +376,8 @@ function CanvasEngine({
     ? backgroundCalibrationPoints
     : measurementPoints;
   const livePointA = activeMeasurementPoints[0];
-  const isMeasuring = currentTool === "measure" || backgroundCalibrationActive;
+  const isMeasuring =
+    !isPanning && (currentTool === "measure" || backgroundCalibrationActive);
   const hasLiveMeasurement =
     isMeasuring &&
     activeMeasurementPoints.length === 1;
@@ -412,6 +422,9 @@ function CanvasEngine({
   }
 
   function handleWallClick(wall, event) {
+    const wallRoom = rooms.find((room) => room.wallIds?.includes(wall.id));
+    const isLockedRoomWall = Boolean(wallRoom?.locked);
+
     if (currentTool === "opening") {
       onSelectOpeningWall(wall.id);
       return;
@@ -439,6 +452,10 @@ function CanvasEngine({
       addWindow(createWindow(wall.id, getWallCenter(wall)));
 
       onSelectTool("select");
+      return;
+    }
+
+    if (currentTool === "wall" || isLockedRoomWall) {
       return;
     }
 
@@ -503,6 +520,9 @@ function CanvasEngine({
             onStartBackgroundMove={onStartBackgroundMove}
             onUpdateBackground={onUpdateBackground}
           />
+          {showWallDimensions && (
+            <GridLayer calibration={calibration} visibleBounds={visibleBounds} />
+          )}
           <WallLayer
             walls={walls}
             selectedWallId={selectedWallId}
@@ -510,6 +530,7 @@ function CanvasEngine({
             onWallMouseDown={handleWallMouseDown}
             onUpdateWallPoint={onUpdateWallPoint}
             onMoveWall={onMoveWall}
+            calibration={calibration}
             rooms={rooms}
             selectedRoomId={selectedRoomId}
             selectedRoomIds={selectedRoomIds}
@@ -562,10 +583,10 @@ function CanvasEngine({
             startPoint={currentTool === "wall" ? wallStartPoint : null}
             endPoint={
               currentTool === "wall" && wallStartPoint
-                ? snapPointWithShift(
+                ? getConstrainedWorldPoint(
                     wallStartPoint,
                     snapPoint ?? cursor,
-                    shiftPressed,
+                    true,
                   )
                 : cursor
             }

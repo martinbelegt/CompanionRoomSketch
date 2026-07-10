@@ -40,6 +40,8 @@ function RoomLayer({
   onClearSnapGuides,
 }) {
   const isOpeningMode = currentTool === "opening";
+  const isPanMode = currentTool === "pan";
+  const canSelectRooms = !isOpeningMode && !isPanMode;
 
   return (
     <>
@@ -47,8 +49,7 @@ function RoomLayer({
         const label = getRoomLabel(room, calibration);
         const isLocked = Boolean(room.locked);
         const isSelected =
-          !isLocked &&
-          (selectedRoomIds.includes(room.id) || room.id === selectedRoomId);
+          selectedRoomIds.includes(room.id) || room.id === selectedRoomId;
         const textColor = isSelected ? "#2563eb" : "#4b5563";
 
         return (
@@ -56,8 +57,8 @@ function RoomLayer({
             key={room.id}
             x={room.center?.x ?? 0}
             y={room.center?.y ?? 0}
-            listening={!isOpeningMode && !isLocked}
-            draggable={!isOpeningMode && !isLocked && room.id === selectedRoomId}
+            listening={canSelectRooms}
+            draggable={canSelectRooms && !isLocked && room.id === selectedRoomId}
             onMouseDown={(e) => {
               e.cancelBubble = true;
               onSelectRoom(
@@ -111,7 +112,7 @@ function RoomLayer({
                 width={room.bounds.width}
                 height={room.bounds.height}
                 fill="rgba(37,99,235,0.01)"
-                listening={!isOpeningMode && !isLocked}
+                listening={canSelectRooms}
                 onClick={(e) => {
                   e.cancelBubble = true;
                   onSelectRoom(
@@ -125,7 +126,7 @@ function RoomLayer({
             <Circle
               radius={120}
               fill="rgba(37, 99, 235, 0.01)"
-              listening={!isOpeningMode && !isLocked}
+              listening={canSelectRooms}
             />
 
             <Text
