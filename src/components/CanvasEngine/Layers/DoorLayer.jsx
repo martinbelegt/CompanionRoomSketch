@@ -109,6 +109,7 @@ function DoorLayer({
   onSelectObject,
   onStartDoorMove,
   onUpdateDoorPosition,
+  onUpdateDoorSize,
   onToggleDoorDirection,
   onToggleDoorSwing,
 }) {
@@ -199,13 +200,26 @@ function DoorLayer({
             openVector,
             doorWidthPx,
           );
+          const dragAreaPoints = [hinge, rebateEnd, doorEnd];
+          const dragAreaMinX = Math.min(...dragAreaPoints.map((point) => point.x));
+          const dragAreaMaxX = Math.max(...dragAreaPoints.map((point) => point.x));
+          const dragAreaMinY = Math.min(...dragAreaPoints.map((point) => point.y));
+          const dragAreaMaxY = Math.max(...dragAreaPoints.map((point) => point.y));
 
           return (
             <Group
               key={door.id}
               x={center.x}
               y={center.y}
-              draggable={isSelected}
+              draggable
+              onMouseEnter={(e) => {
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = "grab";
+              }}
+              onMouseLeave={(e) => {
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = "default";
+              }}
               onMouseDown={(e) => {
                 e.cancelBubble = true;
                 onSelectObject("door", door.id);
@@ -216,6 +230,9 @@ function DoorLayer({
               }}
               onDragStart={(e) => {
                 e.cancelBubble = true;
+                onSelectObject("door", door.id);
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = "grabbing";
                 onStartDoorMove?.();
               }}
               onDragMove={(e) => {
@@ -223,20 +240,22 @@ function DoorLayer({
 
                 const projectedPosition = projectPointToWall(
                   {
-                    x: e.target.x(),
-                    y: e.target.y(),
+                    x: e.currentTarget.x(),
+                    y: e.currentTarget.y(),
                   },
                   wall,
                   halfOpeningWidthPx,
                 );
 
-                e.target.position(projectedPosition);
+                e.currentTarget.position(projectedPosition);
                 onUpdateDoorPosition(door.id, projectedPosition, {
                   skipUndo: true,
                 });
               }}
               onDragEnd={(e) => {
                 e.cancelBubble = true;
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = "grab";
               }}
               onDblClick={(e) => {
                 e.cancelBubble = true;
@@ -248,6 +267,17 @@ function DoorLayer({
                 }
               }}
             >
+              {isSelected && (
+                <Rect
+                  x={dragAreaMinX - 12}
+                  y={dragAreaMinY - 12}
+                  width={Math.max(24, dragAreaMaxX - dragAreaMinX + 24)}
+                  height={Math.max(24, dragAreaMaxY - dragAreaMinY + 24)}
+                  fill="rgba(37,99,235,0.001)"
+                  listening
+                />
+              )}
+
               <Line
                 points={[
                   openingStart.x,
@@ -261,7 +291,7 @@ function DoorLayer({
                 listening={false}
               />
 
-              {[openingStart, openingEnd].map((point, index) => (
+              {[hinge, rebateEnd].map((point, index) => (
                 <Rect
                   key={index}
                   x={point.x - 3}
@@ -302,6 +332,40 @@ function DoorLayer({
                 lineJoin="round"
                 listening={false}
               />
+
+              {isSelected && (
+                <Circle
+                  x={doorEnd.x}
+                  y={doorEnd.y}
+                  radius={7}
+                  fill="white"
+                  stroke={DOOR_SELECTED_COLOR}
+                  strokeWidth={2}
+                  draggable
+                  onMouseDown={(e) => {
+                    e.cancelBubble = true;
+                  }}
+                  onDragMove={(e) => {
+                    e.cancelBubble = true;
+
+                    const nextWidthPx = Math.sqrt(
+                      (e.target.x() - hinge.x) ** 2 +
+                        (e.target.y() - hinge.y) ** 2,
+                    );
+
+                    onUpdateDoorSize?.(door.id, {
+                      doorWidthMm: nextWidthPx * mmPerPixel,
+                    }, { skipUndo: true });
+                  }}
+                  onDragEnd={(e) => {
+                    e.cancelBubble = true;
+                    e.target.position({
+                      x: doorEnd.x,
+                      y: doorEnd.y,
+                    });
+                  }}
+                />
+              )}
             </Group>
           );
         }
@@ -362,7 +426,15 @@ function DoorLayer({
             key={door.id}
             x={center.x}
             y={center.y}
-            draggable={isSelected}
+            draggable
+            onMouseEnter={(e) => {
+              const stage = e.target.getStage();
+              if (stage) stage.container().style.cursor = "grab";
+            }}
+            onMouseLeave={(e) => {
+              const stage = e.target.getStage();
+              if (stage) stage.container().style.cursor = "default";
+            }}
             onMouseDown={(e) => {
               e.cancelBubble = true;
               onSelectObject("door", door.id);
@@ -373,6 +445,9 @@ function DoorLayer({
             }}
             onDragStart={(e) => {
               e.cancelBubble = true;
+              onSelectObject("door", door.id);
+              const stage = e.target.getStage();
+              if (stage) stage.container().style.cursor = "grabbing";
               onStartDoorMove?.();
             }}
             onDragMove={(e) => {
@@ -380,20 +455,22 @@ function DoorLayer({
 
               const projectedPosition = projectPointToWall(
                 {
-                  x: e.target.x(),
-                  y: e.target.y(),
+                  x: e.currentTarget.x(),
+                  y: e.currentTarget.y(),
                 },
                 wall,
                 halfDoorWidthPx,
               );
 
-              e.target.position(projectedPosition);
+              e.currentTarget.position(projectedPosition);
               onUpdateDoorPosition(door.id, projectedPosition, {
                 skipUndo: true,
               });
             }}
             onDragEnd={(e) => {
               e.cancelBubble = true;
+              const stage = e.target.getStage();
+              if (stage) stage.container().style.cursor = "grab";
             }}
             onDblClick={(e) => {
               e.cancelBubble = true;
@@ -443,6 +520,40 @@ function DoorLayer({
               lineJoin="round"
               listening={false}
             />
+
+            {isSelected && (
+              <Circle
+                x={doorEnd.x}
+                y={doorEnd.y}
+                radius={7}
+                fill="white"
+                stroke={DOOR_SELECTED_COLOR}
+                strokeWidth={2}
+                draggable
+                onMouseDown={(e) => {
+                  e.cancelBubble = true;
+                }}
+                onDragMove={(e) => {
+                  e.cancelBubble = true;
+
+                  const nextWidthPx = Math.sqrt(
+                    (e.target.x() - hinge.x) ** 2 +
+                      (e.target.y() - hinge.y) ** 2,
+                  );
+
+                  onUpdateDoorSize?.(door.id, {
+                    doorWidthMm: nextWidthPx * mmPerPixel,
+                  }, { skipUndo: true });
+                }}
+                onDragEnd={(e) => {
+                  e.cancelBubble = true;
+                  e.target.position({
+                    x: doorEnd.x,
+                    y: doorEnd.y,
+                  });
+                }}
+              />
+            )}
           </Group>
         );
       })}

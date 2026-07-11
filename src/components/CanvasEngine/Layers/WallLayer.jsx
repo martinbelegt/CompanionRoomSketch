@@ -33,8 +33,11 @@ function WallLayer({
   onUpdateWallPoint,
   onMoveWall,
   calibration,
+  currentTool,
   roomDraftWallIds = [],
 }) {
+  const isPanMode = currentTool === "pan";
+
   return (
     <>
       {walls.map((wall) => {
@@ -64,7 +67,7 @@ function WallLayer({
               strokeWidth={wallWidth}
               lineCap="square"
               lineJoin="miter"
-              draggable={wall.id === selectedWallId}
+              draggable={!isPanMode && wall.id === selectedWallId}
               onClick={(e) => {
                 e.cancelBubble = true;
                 onWallClick(wall, e);

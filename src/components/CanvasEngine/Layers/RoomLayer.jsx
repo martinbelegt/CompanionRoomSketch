@@ -112,14 +112,7 @@ function RoomLayer({
                 width={room.bounds.width}
                 height={room.bounds.height}
                 fill="rgba(37,99,235,0.01)"
-                listening={canSelectRooms}
-                onClick={(e) => {
-                  e.cancelBubble = true;
-                  onSelectRoom(
-                    room.id,
-                    e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey,
-                  );
-                }}
+                listening={false}
               />
             )}
 

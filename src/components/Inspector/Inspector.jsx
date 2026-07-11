@@ -28,6 +28,8 @@ function Inspector({
   onUpdateRectangleRoomWalls = () => {},
   onSetRoomLocked = () => {},
   onToggleDoorDirection = () => {},
+  onToggleDoorSwing = () => {},
+  onUpdateDoorSize = () => {},
   onConvertOpeningToDoor = () => {},
   onConvertDoorToOpening = () => {},
   onToggleFloorplan = () => {},
@@ -45,6 +47,8 @@ function Inspector({
   const [roomWidthMm, setRoomWidthMm] = useState("");
   const [roomWallThicknessMm, setRoomWallThicknessMm] = useState("");
   const [roomWallColor, setRoomWallColor] = useState("#374151");
+  const [doorWidthMm, setDoorWidthMm] = useState("");
+  const [doorOpeningWidthMm, setDoorOpeningWidthMm] = useState("");
 
   const selectedFurniture = furniture.find(
     (item) => item.id === selectedFurnitureId,
@@ -154,6 +158,26 @@ function Inspector({
     firstSelectedRoomWall?.color,
   ]);
 
+  useEffect(() => {
+    if (!selectedDoor) {
+      setDoorWidthMm("");
+      setDoorOpeningWidthMm("");
+      return;
+    }
+
+    setDoorWidthMm(String(Math.round(selectedDoor.doorWidthMm ?? selectedDoor.widthMm ?? 900)));
+    setDoorOpeningWidthMm(
+      String(
+        Math.round(
+          selectedDoor.sparingWidthMm ??
+            selectedDoor.doorWidthMm ??
+            selectedDoor.widthMm ??
+            900,
+        ),
+      ),
+    );
+  }, [selectedDoor]);
+
   function handleUseAsScale() {
     if (!hasRealDistance) return;
     onCalibrate(enteredDistance);
@@ -239,6 +263,25 @@ function Inspector({
       lengthMm: nextLengthMm,
       thicknessMm: nextThicknessMm,
       color: nextColor,
+    });
+  }
+
+  function updateSelectedDoorSize(nextValues) {
+    if (!selectedDoor) return;
+
+    const nextDoorWidthMm = Number(
+      String(nextValues.doorWidthMm ?? doorWidthMm).replace(",", "."),
+    );
+    const nextOpeningWidthMm = Number(
+      String(nextValues.sparingWidthMm ?? doorOpeningWidthMm).replace(",", "."),
+    );
+
+    if (!Number.isFinite(nextDoorWidthMm) || nextDoorWidthMm <= 0) return;
+    if (!Number.isFinite(nextOpeningWidthMm) || nextOpeningWidthMm <= 0) return;
+
+    onUpdateDoorSize(selectedDoor.id, {
+      doorWidthMm: nextDoorWidthMm,
+      sparingWidthMm: nextOpeningWidthMm,
     });
   }
 
@@ -572,12 +615,54 @@ function Inspector({
               <strong>{selectedDoor.doorWidthMm ?? selectedDoor.widthMm} mm</strong>
             </div>
 
-            <button
-              className="primary-button"
-              onClick={() => onToggleDoorDirection(selectedDoor.id)}
-            >
-              Draairichting wisselen
-            </button>
+            <label className="field-label">
+              Deurbladbreedte
+              <input
+                inputMode="numeric"
+                value={doorWidthMm}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setDoorWidthMm(nextValue);
+                  updateSelectedDoorSize({ doorWidthMm: nextValue });
+                }}
+                placeholder="bijv. 830 mm"
+              />
+            </label>
+
+            <label className="field-label">
+              Openingbreedte
+              <input
+                inputMode="numeric"
+                value={doorOpeningWidthMm}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setDoorOpeningWidthMm(nextValue);
+                  updateSelectedDoorSize({ sparingWidthMm: nextValue });
+                }}
+                placeholder="bijv. 930 mm"
+              />
+            </label>
+
+            <div className="door-direction-controls">
+              <strong>Deurstand</strong>
+              <p className="muted">
+                Combineer beide keuzes voor de vier mogelijke deurstanden.
+              </p>
+
+              <button
+                className="primary-button"
+                onClick={() => onToggleDoorSwing(selectedDoor.id)}
+              >
+                Scharnier naar andere kant
+              </button>
+
+              <button
+                className="primary-button"
+                onClick={() => onToggleDoorDirection(selectedDoor.id)}
+              >
+                Deur naar andere zijde openen
+              </button>
+            </div>
 
             {selectedDoor.openingId && (
               <button

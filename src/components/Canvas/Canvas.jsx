@@ -6,6 +6,7 @@ import RoomSketchWizard from "../Wizard/RoomSketchWizard";
 function Canvas({
   furniture,
   walls,
+  wallSuggestions,
   doors,
   windows,
   openings,
@@ -22,6 +23,7 @@ function Canvas({
   onApplyBackgroundCalibration,
   backgroundWorkflowRequest,
   addWall,
+  onRemoveWallSuggestion,
   addDoor,
   addWindow,
   selectedFurnitureId,
@@ -49,6 +51,7 @@ function Canvas({
   onFinishBackgroundRoomAlign,
   onStartDoorMove,
   onUpdateDoorPosition,
+  onUpdateDoorSize,
   onUpdateWindowPosition,
   resetCanvasRequest,
   canvasCamera,
@@ -71,12 +74,19 @@ function Canvas({
   onToggleDoorDirection,
   onToggleDoorSwing,
   onSelectOpeningWall,
+  onConvertOpeningToDoor,
+  onPlaceDoorInWallGap,
 }) {
   return (
     <div className="canvas-workspace">
       {activeTool === "opening" && (
         <div className="canvas-hint">
           Klik op de muur waarin je de open doorgang wilt maken.
+        </div>
+      )}
+      {activeTool === "door" && (
+        <div className="canvas-hint">
+          Klik op een muur, of op de gewenste plek in een open doorgang.
         </div>
       )}
       {backgroundRoomAlignActive && (
@@ -89,6 +99,7 @@ function Canvas({
         <CanvasEngine
           furniture={furniture}
           walls={walls}
+          wallSuggestions={wallSuggestions}
           doors={doors}
           windows={windows}
           openings={openings}
@@ -96,6 +107,7 @@ function Canvas({
           backgroundCalibrationActive={backgroundCalibrationActive}
           backgroundRoomAlignActive={backgroundRoomAlignActive}
           addWall={addWall}
+          onRemoveWallSuggestion={onRemoveWallSuggestion}
           addDoor={addDoor}
           addWindow={addWindow}
           selectedFurnitureId={selectedFurnitureId}
@@ -125,6 +137,7 @@ function Canvas({
           onFinishBackgroundRoomAlign={onFinishBackgroundRoomAlign}
           onStartDoorMove={onStartDoorMove}
           onUpdateDoorPosition={onUpdateDoorPosition}
+          onUpdateDoorSize={onUpdateDoorSize}
           onUpdateWindowPosition={onUpdateWindowPosition}
           resetCanvasRequest={resetCanvasRequest}
           canvasCamera={canvasCamera}
@@ -147,6 +160,8 @@ function Canvas({
           onToggleDoorDirection={onToggleDoorDirection}
           onToggleDoorSwing={onToggleDoorSwing}
           onSelectOpeningWall={onSelectOpeningWall}
+          onConvertOpeningToDoor={onConvertOpeningToDoor}
+          onPlaceDoorInWallGap={onPlaceDoorInWallGap}
         />
       </div>
 

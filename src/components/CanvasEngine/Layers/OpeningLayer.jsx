@@ -19,6 +19,8 @@ function OpeningLayer({
   calibration,
   selectedObject,
   onSelectObject,
+  currentTool,
+  onConvertOpeningToDoor,
 }) {
   const mmPerPixel = calibration?.mmPerPixel ?? DEFAULT_MM_PER_PIXEL;
 
@@ -44,17 +46,39 @@ function OpeningLayer({
                 opening.position.x + direction.x * halfWidth,
                 opening.position.y + direction.y * halfWidth,
               ]}
-              stroke={isSelected ? "#2563eb" : "rgba(37,99,235,0.01)"}
-              strokeWidth={isSelected ? 2 : 18}
+              stroke={
+                isSelected
+                  ? "#2563eb"
+                  : currentTool === "door"
+                    ? "rgba(37,99,235,0.35)"
+                    : "rgba(37,99,235,0.16)"
+              }
+              strokeWidth={isSelected ? 3 : currentTool === "door" ? 22 : 14}
               dash={isSelected ? [5, 4] : undefined}
-              hitStrokeWidth={36}
+              hitStrokeWidth={72}
               listening
+              onMouseEnter={(e) => {
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = "pointer";
+              }}
+              onMouseLeave={(e) => {
+                const stage = e.target.getStage();
+                if (stage) stage.container().style.cursor = "default";
+              }}
               onMouseDown={(e) => {
                 e.cancelBubble = true;
+                if (currentTool === "door") {
+                  onConvertOpeningToDoor?.(opening.id);
+                  return;
+                }
                 onSelectObject("opening", opening.id);
               }}
               onClick={(e) => {
                 e.cancelBubble = true;
+                if (currentTool === "door") {
+                  onConvertOpeningToDoor?.(opening.id);
+                  return;
+                }
                 onSelectObject("opening", opening.id);
               }}
             />

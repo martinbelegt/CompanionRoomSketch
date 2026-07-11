@@ -161,6 +161,24 @@
   color: #64748b;
   font-size: 14px;
 }
+
+.door-direction-controls {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.door-direction-controls > strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #334155;
+  font-size: 13px;
+}
+
+.door-direction-controls .muted {
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
 .danger-button {
   width: 100%;
   padding: 11px 12px;

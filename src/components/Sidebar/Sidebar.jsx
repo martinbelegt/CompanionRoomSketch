@@ -6,6 +6,15 @@ import furnitureCatalog, {
 import "./Sidebar.css";
 
 function Sidebar({
+  projectTitle,
+  savedProjects = [],
+  activeProjectId,
+  onSaveProject,
+  onRenameProject,
+  onNewProject,
+  onOpenProject,
+  onExportProject,
+  onImportProject,
   onAddFurniture,
   activeTool,
   onSelectTool,
@@ -18,9 +27,14 @@ function Sidebar({
   roomDraftWallIds = [],
   onSaveRoomDraft,
   onStartOpening,
-  onSaveProject,
   onRestoreSavedProject,
   canRestoreSavedProject = false,
+  onDetectWalls,
+  wallDetectionBusy = false,
+  wallSuggestionCount = 0,
+  onAcceptWallSuggestions,
+  onClearWallSuggestions,
+  canDetectWalls = false,
 }) {
   const [furnitureOpen, setFurnitureOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState({
@@ -50,6 +64,54 @@ function Sidebar({
 
   return (
     <aside className="sidebar">
+      <div className="sidebar-card sidebar-card-blue">
+        <div className="sidebar-section-title">Project</div>
+
+        <div className="sidebar-project-name">{projectTitle}</div>
+
+        <button className="sidebar-button" onClick={onSaveProject}>
+          Project opslaan
+        </button>
+
+        <button className="sidebar-button" onClick={onRenameProject}>
+          Naam wijzigen
+        </button>
+
+        <button className="sidebar-button" onClick={onNewProject}>
+          Nieuw project
+        </button>
+
+        <div className="sidebar-file-actions">
+          <button className="sidebar-button" onClick={onExportProject}>
+            Projectbestand opslaan
+          </button>
+
+          <button className="sidebar-button" onClick={onImportProject}>
+            Projectbestand openen
+          </button>
+        </div>
+
+        {savedProjects.length > 0 && (
+          <label className="sidebar-select-label">
+            Open project
+            <select
+              value={activeProjectId ?? ""}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                onOpenProject(e.target.value);
+              }}
+            >
+              <option value="">Kies project...</option>
+              {savedProjects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.projectTitle ?? "Naamloos project"}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
       <div className="sidebar-card sidebar-card-gray">
         <div className="sidebar-section-title">Stap 1 • Woning tekenen</div>
 
@@ -95,6 +157,33 @@ function Sidebar({
 
         <button
           className="sidebar-button"
+          onClick={onDetectWalls}
+          disabled={!canDetectWalls || wallDetectionBusy}
+        >
+          {wallDetectionBusy ? "Muren zoeken..." : "Muren herkennen"}
+          <br />
+          <small>Maak eerst blauwe voorstellen</small>
+        </button>
+
+        {wallSuggestionCount > 0 && (
+          <div className="sidebar-suggestion-actions">
+            <div className="sidebar-small-text">
+              Gevonden muren: {wallSuggestionCount}
+            </div>
+            <button
+              className="sidebar-button sidebar-primary-button"
+              onClick={onAcceptWallSuggestions}
+            >
+              Voorstellen accepteren
+            </button>
+            <button className="sidebar-button" onClick={onClearWallSuggestions}>
+              Voorstellen wissen
+            </button>
+          </div>
+        )}
+
+        <button
+          className="sidebar-button"
           style={getToolButtonStyle("room")}
           onClick={onStartRoomDraft}
         >
@@ -125,7 +214,7 @@ function Sidebar({
         >
           🚪 Deuren plaatsen
           <br />
-          <small>(Klik op een muur)</small>
+          <small>Klik op een muur of in een open doorgang</small>
         </button>
 
         <button
@@ -164,9 +253,6 @@ function Sidebar({
           Wis alle muren
         </button>
 
-        <button className="sidebar-button" onClick={onSaveProject}>
-          Opslaan
-        </button>
         <button
           className="sidebar-button"
           onClick={onRestoreSavedProject}

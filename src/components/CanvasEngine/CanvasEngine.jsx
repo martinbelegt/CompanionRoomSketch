@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import "./CanvasEngine.css";
 
@@ -14,6 +14,7 @@ import GridLayer from "./Layers/GridLayer";
 import MeasurementLayer from "./Layers/MeasurementLayer";
 import PendingFurnitureLayer from "./Layers/PendingFurnitureLayer";
 import WallLayer from "./Layers/WallLayer";
+import WallSuggestionLayer from "./Layers/WallSuggestionLayer";
 
 import {
   buildWorldMeasurementPoints,
@@ -70,6 +71,7 @@ function createPointAtDistance(startPoint, directionPoint, distancePx) {
 function CanvasEngine({
   furniture,
   walls,
+  wallSuggestions,
   doors,
   windows,
   openings,
@@ -77,10 +79,12 @@ function CanvasEngine({
   backgroundCalibrationActive,
   backgroundRoomAlignActive,
   addWall,
+  onRemoveWallSuggestion,
   addDoor,
   addWindow,
   onStartDoorMove,
   onUpdateDoorPosition,
+  onUpdateDoorSize,
   selectedFurnitureId,
   onSelectFurniture,
   onMoveFurniture,
@@ -126,6 +130,8 @@ function CanvasEngine({
   onToggleDoorDirection,
   onToggleDoorSwing,
   onSelectOpeningWall,
+  onConvertOpeningToDoor,
+  onPlaceDoorInWallGap,
 }) {
   const { containerRef, width, height } = useCanvasSize();
   const { camera, zoomAtPointer, updatePosition, resetCamera, restoreCamera } =
@@ -153,6 +159,7 @@ function CanvasEngine({
   const [marqueeStart, setMarqueeStart] = useState(null);
   const [marqueeEnd, setMarqueeEnd] = useState(null);
   const [isMarqueeDragging, setIsMarqueeDragging] = useState(false);
+  const lastCameraRestoreRequestRef = useRef(canvasCameraRestoreRequest);
   const [backgroundCalibrationPoints, setBackgroundCalibrationPoints] =
     useState([]);
 
@@ -170,6 +177,11 @@ function CanvasEngine({
 
   useEffect(() => {
     if (!canvasCameraRestoreRequest) return;
+    if (lastCameraRestoreRequestRef.current === canvasCameraRestoreRequest) {
+      return;
+    }
+
+    lastCameraRestoreRequestRef.current = canvasCameraRestoreRequest;
     restoreCamera(canvasCamera);
   }, [canvasCamera, canvasCameraRestoreRequest, restoreCamera]);
 
@@ -330,6 +342,11 @@ function CanvasEngine({
       return;
     }
 
+    if (currentTool === "door" && e.target === stage) {
+      onPlaceDoorInWallGap?.(rawPointer);
+      return;
+    }
+
     if (currentTool === "placeFurniture") {
       onPlaceFurniture(rawPointer);
       return;
@@ -485,7 +502,7 @@ function CanvasEngine({
         y={camera.y}
         scaleX={camera.scale}
         scaleY={camera.scale}
-        draggable={currentTool === "pan" && !selectedWallId}
+        draggable={currentTool === "pan"}
         onDragEnd={(e) => {
           const stage = e.target.getStage();
 
@@ -523,6 +540,11 @@ function CanvasEngine({
           {showWallDimensions && (
             <GridLayer calibration={calibration} visibleBounds={visibleBounds} />
           )}
+          <WallSuggestionLayer
+            suggestions={wallSuggestions}
+            currentTool={currentTool}
+            onRemoveSuggestion={onRemoveWallSuggestion}
+          />
           <WallLayer
             walls={walls}
             selectedWallId={selectedWallId}
@@ -531,6 +553,7 @@ function CanvasEngine({
             onUpdateWallPoint={onUpdateWallPoint}
             onMoveWall={onMoveWall}
             calibration={calibration}
+            currentTool={currentTool}
             rooms={rooms}
             selectedRoomId={selectedRoomId}
             selectedRoomIds={selectedRoomIds}
@@ -557,6 +580,7 @@ function CanvasEngine({
             onSelectObject={onSelectObject}
             onStartDoorMove={onStartDoorMove}
             onUpdateDoorPosition={onUpdateDoorPosition}
+            onUpdateDoorSize={onUpdateDoorSize}
             onToggleDoorDirection={onToggleDoorDirection}
             onToggleDoorSwing={onToggleDoorSwing}
           />
@@ -566,6 +590,8 @@ function CanvasEngine({
             calibration={calibration}
             selectedObject={selectedObject}
             onSelectObject={onSelectObject}
+            currentTool={currentTool}
+            onConvertOpeningToDoor={onConvertOpeningToDoor}
           />
           <WindowLayer
             windows={windows}

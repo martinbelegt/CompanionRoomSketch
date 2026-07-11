@@ -15,6 +15,8 @@ import "../styles/AppLayout.css";
 import { createCalibration, getWorldDistance } from "../measurement";
 
 import { createWall } from "../walls/wallUtils";
+import { detectWallSuggestions } from "../walls/wallDetection";
+import { DEFAULT_DOOR_WIDTH_MM } from "../doors/doorConstants";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
@@ -24,6 +26,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 const STORAGE_KEYS = {
   project: "companion-roomsketch-project",
   manualProject: "companion-roomsketch-manual-project",
+  namedProjects: "companion-roomsketch-named-projects",
+  activeProjectId: "companion-roomsketch-active-project-id",
   furniture: "companion-roomsketch-placed-furniture",
   calibration: "companion-roomsketch-calibration",
   myFurniture: "companion-roomsketch-my-furniture",
@@ -37,7 +41,7 @@ const STORAGE_KEYS = {
 };
 
 const SNAP_DISTANCE = 20;
-const PROJECT_TITLE = "Appartement Hank";
+const DEFAULT_PROJECT_TITLE = "Naamloos project";
 const PROJECT_SAVE_VERSION = 1;
 const DEFAULT_CANVAS_CAMERA = {
   x: 0,
@@ -71,6 +75,48 @@ function saveToStorage(key, value) {
 
 function getSavedProject() {
   return loadFromStorage(STORAGE_KEYS.project, null);
+}
+
+function getSavedNamedProjects() {
+  return loadFromStorage(STORAGE_KEYS.namedProjects, []);
+}
+
+function getProjectName(project, fallback = DEFAULT_PROJECT_TITLE) {
+  return project?.projectTitle || project?.name || fallback;
+}
+
+function sortProjectsBySavedAt(projects) {
+  return [...projects].sort(
+    (a, b) => new Date(b.savedAt ?? 0) - new Date(a.savedAt ?? 0),
+  );
+}
+
+function makeSafeProjectFileName(title) {
+  const safeTitle = (title || DEFAULT_PROJECT_TITLE)
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")
+    .replace(/[. ]+$/g, "")
+    .trim();
+
+  return `${safeTitle || "RoomSketch-project"}.roomsketch.json`;
+}
+
+function isRoomSketchProject(project) {
+  return Boolean(
+    project &&
+      typeof project === "object" &&
+      typeof project.projectTitle === "string" &&
+      project.data &&
+      typeof project.data === "object",
+  );
+}
+
+function getInitialProjectTitle() {
+  const activeId = loadFromStorage(STORAGE_KEYS.activeProjectId, null);
+  const activeProject = getSavedNamedProjects().find(
+    (project) => project.id === activeId,
+  );
+
+  return getProjectName(activeProject, DEFAULT_PROJECT_TITLE);
 }
 
 function hasMeaningfulSavedProject(project) {
@@ -498,11 +544,125 @@ function getOpeningFillDirection(wall, opening, rooms) {
       };
 }
 
+function getWallDirectionForGap(wall) {
+  const dx = wall.endPoint.x - wall.startPoint.x;
+  const dy = wall.endPoint.y - wall.startPoint.y;
+  const length = Math.sqrt(dx * dx + dy * dy) || 1;
+
+  return {
+    x: dx / length,
+    y: dy / length,
+    length,
+  };
+}
+
+function findDoorGapAtPoint(point, walls, calibration) {
+  const mmPerPixel = calibration?.mmPerPixel ?? 10;
+  const axisTolerance = Math.max(8, 120 / mmPerPixel);
+  const clickTolerance = Math.max(16, 220 / mmPerPixel);
+  const minGap = 550 / mmPerPixel;
+  const maxGap = 3000 / mmPerPixel;
+
+  for (const firstWall of walls) {
+    const firstDirection = getWallDirectionForGap(firstWall);
+    const firstHorizontal =
+      Math.abs(firstDirection.x) >= Math.abs(firstDirection.y);
+
+    for (const secondWall of walls) {
+      if (firstWall.id === secondWall.id) continue;
+
+      const secondDirection = getWallDirectionForGap(secondWall);
+      const secondHorizontal =
+        Math.abs(secondDirection.x) >= Math.abs(secondDirection.y);
+
+      if (firstHorizontal !== secondHorizontal) continue;
+
+      const firstPoints = [firstWall.startPoint, firstWall.endPoint];
+      const secondPoints = [secondWall.startPoint, secondWall.endPoint];
+
+      for (const firstPoint of firstPoints) {
+        for (const secondPoint of secondPoints) {
+          const sameAxis = firstHorizontal
+            ? Math.abs(firstPoint.y - secondPoint.y) <= axisTolerance
+            : Math.abs(firstPoint.x - secondPoint.x) <= axisTolerance;
+
+          if (!sameAxis) continue;
+
+          const gapLength = firstHorizontal
+            ? Math.abs(firstPoint.x - secondPoint.x)
+            : Math.abs(firstPoint.y - secondPoint.y);
+
+          if (gapLength < minGap || gapLength > maxGap) continue;
+
+          const startPoint =
+            firstHorizontal && firstPoint.x <= secondPoint.x
+              ? firstPoint
+              : firstHorizontal
+                ? secondPoint
+                : firstPoint.y <= secondPoint.y
+                  ? firstPoint
+                  : secondPoint;
+          const endPoint = startPoint === firstPoint ? secondPoint : firstPoint;
+          const gapDx = endPoint.x - startPoint.x;
+          const gapDy = endPoint.y - startPoint.y;
+          const gapLengthSquared = gapDx * gapDx + gapDy * gapDy || 1;
+          const rawProgress =
+            ((point.x - startPoint.x) * gapDx +
+              (point.y - startPoint.y) * gapDy) /
+            gapLengthSquared;
+          const progress = Math.max(0, Math.min(1, rawProgress));
+          const projectedClick = {
+            x: startPoint.x + gapDx * progress,
+            y: startPoint.y + gapDy * progress,
+          };
+          const clickDistance = Math.sqrt(
+            (point.x - projectedClick.x) ** 2 +
+              (point.y - projectedClick.y) ** 2,
+          );
+
+          if (clickDistance > clickTolerance) continue;
+
+          const doorWidthPx = Math.min(
+            DEFAULT_DOOR_WIDTH_MM / mmPerPixel,
+            gapLength,
+          );
+          const edgeProgress = doorWidthPx / 2 / gapLength;
+          const doorProgress = Math.max(
+            edgeProgress,
+            Math.min(1 - edgeProgress, progress),
+          );
+
+          return {
+            wallIds: [firstWall.id, secondWall.id],
+            wallId: firstWall.id,
+            startPoint,
+            endPoint,
+            position: {
+              x: startPoint.x + gapDx * doorProgress,
+              y: startPoint.y + gapDy * doorProgress,
+            },
+            widthMm: Math.round(doorWidthPx * mmPerPixel),
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function AppLayout() {
   const [savedProject] = useState(() => getSavedProject());
   const [manualSavedProject, setManualSavedProject] = useState(() =>
     loadFromStorage(STORAGE_KEYS.manualProject, null),
   );
+  const [savedProjects, setSavedProjects] = useState(() =>
+    sortProjectsBySavedAt(getSavedNamedProjects()),
+  );
+  const [activeProjectId, setActiveProjectId] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.activeProjectId, null),
+  );
+  const [projectTitle, setProjectTitle] = useState(getInitialProjectTitle);
   const [showRestorePrompt, setShowRestorePrompt] = useState(() =>
     hasMeaningfulSavedProject(savedProject),
   );
@@ -511,6 +671,8 @@ function AppLayout() {
   const [furniture, setFurniture] = useState([]);
 
   const [walls, setWalls] = useState([]);
+  const [wallSuggestions, setWallSuggestions] = useState([]);
+  const [wallDetectionBusy, setWallDetectionBusy] = useState(false);
 
   const [doors, setDoors] = useState([]);
 
@@ -592,6 +754,7 @@ function AppLayout() {
 
   function restoreUndoState(snapshot) {
     setWalls(snapshot.walls);
+    setWallSuggestions([]);
     setRooms(snapshot.rooms);
     setDoors(snapshot.doors);
     setWindows(snapshot.windows);
@@ -633,6 +796,55 @@ function AppLayout() {
     pushUndoSnapshot();
     setWalls((current) => [...current, wall]);
     setSelectedWallId(wall.id);
+    setSelectedObject(null);
+    setSelectedRoomId(null);
+    setSelectedRoomIds([]);
+    setSelectedFurnitureId(null);
+    setBulkSelection(EMPTY_BULK_SELECTION);
+  }
+
+  async function detectWallsFromBackground() {
+    if (!background?.source || wallDetectionBusy) return;
+
+    setWallDetectionBusy(true);
+
+    try {
+      const suggestions = await detectWallSuggestions(background);
+
+      setWallSuggestions(suggestions);
+
+      if (!suggestions.length) {
+        window.alert("Er zijn nog geen duidelijke muren gevonden.");
+      }
+    } catch {
+      window.alert("Muren herkennen lukte niet met deze bouwtekening.");
+    } finally {
+      setWallDetectionBusy(false);
+    }
+  }
+
+  function removeWallSuggestion(id) {
+    setWallSuggestions((current) =>
+      current.filter((suggestion) => suggestion.id !== id),
+    );
+  }
+
+  function clearWallSuggestions() {
+    setWallSuggestions([]);
+  }
+
+  function acceptWallSuggestions() {
+    if (!wallSuggestions.length) return;
+
+    pushUndoSnapshot();
+
+    const acceptedWalls = wallSuggestions.map((suggestion) =>
+      createWall(suggestion.startPoint, suggestion.endPoint),
+    );
+
+    setWalls((current) => [...current, ...acceptedWalls]);
+    setWallSuggestions([]);
+    setSelectedWallId(acceptedWalls[acceptedWalls.length - 1]?.id ?? null);
     setSelectedObject(null);
     setSelectedRoomId(null);
     setSelectedRoomIds([]);
@@ -687,6 +899,53 @@ function AppLayout() {
             ? {
                 ...opening,
                 position,
+              }
+            : opening,
+        ),
+      );
+    }
+  }
+
+  function updateDoorSize(id, sizeMm, options = {}) {
+    const doorWidthMm = Number(sizeMm.doorWidthMm);
+    const sparingWidthMm = Number(sizeMm.sparingWidthMm);
+    const nextUpdates = {};
+
+    if (Number.isFinite(doorWidthMm) && doorWidthMm > 0) {
+      nextUpdates.doorWidthMm = Math.max(50, doorWidthMm);
+      nextUpdates.widthMm = Math.max(50, doorWidthMm);
+    }
+
+    if (Number.isFinite(sparingWidthMm) && sparingWidthMm > 0) {
+      nextUpdates.sparingWidthMm = Math.max(50, sparingWidthMm);
+    }
+
+    if (!Object.keys(nextUpdates).length) return;
+
+    if (!options.skipUndo) {
+      pushUndoSnapshot();
+    }
+
+    setDoors((current) =>
+      current.map((door) =>
+        door.id === id
+          ? {
+              ...door,
+              ...nextUpdates,
+            }
+          : door,
+      ),
+    );
+
+    const door = doors.find((item) => item.id === id);
+
+    if (door?.openingId && Number.isFinite(sparingWidthMm) && sparingWidthMm > 0) {
+      setOpenings((current) =>
+        current.map((opening) =>
+          opening.id === door.openingId
+            ? {
+                ...opening,
+                widthMm: Math.max(50, sparingWidthMm),
               }
             : opening,
         ),
@@ -823,10 +1082,15 @@ function AppLayout() {
     loadFromStorage(STORAGE_KEYS.myFurniture, []),
   );
 
-  function getProjectSnapshot() {
+  function getProjectSnapshot(options = {}) {
+    const snapshotProjectId = activeProjectId ?? crypto.randomUUID();
+    const trimmedTitle =
+      options.projectTitle?.trim() || projectTitle.trim() || DEFAULT_PROJECT_TITLE;
+
     return {
+      id: snapshotProjectId,
       version: PROJECT_SAVE_VERSION,
-      projectTitle: PROJECT_TITLE,
+      projectTitle: trimmedTitle,
       savedAt: new Date().toISOString(),
       data: {
         furniture,
@@ -847,13 +1111,28 @@ function AppLayout() {
     };
   }
 
-  function saveProjectSnapshot({ showConfirmation = false } = {}) {
-    const snapshot = getProjectSnapshot();
+  function saveProjectSnapshot({
+    showConfirmation = false,
+    projectTitleOverride = null,
+  } = {}) {
+    const snapshot = getProjectSnapshot({
+      projectTitle: projectTitleOverride,
+    });
 
     saveToStorage(STORAGE_KEYS.project, snapshot);
     saveToStorage(STORAGE_KEYS.myFurniture, myFurniture);
 
     if (showConfirmation) {
+      const nextProjects = sortProjectsBySavedAt([
+        snapshot,
+        ...savedProjects.filter((project) => project.id !== snapshot.id),
+      ]);
+
+      setSavedProjects(nextProjects);
+      setActiveProjectId(snapshot.id);
+      setProjectTitle(snapshot.projectTitle);
+      saveToStorage(STORAGE_KEYS.namedProjects, nextProjects);
+      saveToStorage(STORAGE_KEYS.activeProjectId, snapshot.id);
       saveToStorage(STORAGE_KEYS.manualProject, snapshot);
       setManualSavedProject(snapshot);
       setManualSaveVisible(true);
@@ -866,6 +1145,7 @@ function AppLayout() {
     setSelectedRoomId(null);
     setSelectedRoomIds([]);
     setRoomDraftWallIds([]);
+    setWallSuggestions([]);
     setUndoStack([]);
     setRedoStack([]);
     setActiveSnapGuides([]);
@@ -912,13 +1192,222 @@ function AppLayout() {
     setMyFurniture(projectState.myFurniture ?? []);
   }
 
+  function saveCurrentNamedProject() {
+    if (!activeProjectId || !projectTitle.trim()) {
+      const nextTitle = window.prompt("Naam van dit project:", projectTitle);
+
+      if (!nextTitle?.trim()) return;
+
+      saveProjectSnapshot({
+        showConfirmation: true,
+        projectTitleOverride: nextTitle.trim(),
+      });
+      return;
+    }
+
+    saveProjectSnapshot({ showConfirmation: true });
+  }
+
+  async function exportProjectFile() {
+    const snapshot = getProjectSnapshot();
+    const contents = JSON.stringify(snapshot, null, 2);
+    const suggestedName = makeSafeProjectFileName(snapshot.projectTitle);
+
+    try {
+      if ("showSaveFilePicker" in window) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName,
+          types: [
+            {
+              description: "RoomSketch-project",
+              accept: { "application/json": [".roomsketch.json"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(contents);
+        await writable.close();
+      } else {
+        const url = URL.createObjectURL(
+          new Blob([contents], { type: "application/json" }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = suggestedName;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      saveProjectSnapshot({ showConfirmation: true });
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        window.alert("Het projectbestand kon niet worden opgeslagen.");
+      }
+    }
+  }
+
+  function importProjectFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".roomsketch.json,.json,application/json";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        const imported = JSON.parse(await file.text());
+        if (!isRoomSketchProject(imported)) throw new Error("invalid project");
+
+        const project = {
+          ...imported,
+          id: imported.id || crypto.randomUUID(),
+          savedAt: new Date().toISOString(),
+        };
+        const nextProjects = sortProjectsBySavedAt([
+          project,
+          ...savedProjects.filter((item) => item.id !== project.id),
+        ]);
+
+        applyProjectState(project.data);
+        setSavedProjects(nextProjects);
+        setActiveProjectId(project.id);
+        setProjectTitle(getProjectName(project));
+        saveToStorage(STORAGE_KEYS.namedProjects, nextProjects);
+        saveToStorage(STORAGE_KEYS.activeProjectId, project.id);
+        saveToStorage(STORAGE_KEYS.project, project);
+        setManualSavedProject(project);
+        setShowRestorePrompt(false);
+      } catch {
+        window.alert("Dit is geen geldig RoomSketch-projectbestand.");
+      }
+    };
+    input.click();
+  }
+
+  function renameCurrentProject() {
+    const nextTitle = window.prompt("Naam van dit project:", projectTitle);
+
+    if (!nextTitle?.trim()) return;
+
+    const cleanTitle = nextTitle.trim();
+
+    setProjectTitle(cleanTitle);
+
+    if (!activeProjectId) return;
+
+    const nextProjects = sortProjectsBySavedAt(
+      savedProjects.map((project) =>
+        project.id === activeProjectId
+          ? {
+              ...project,
+              projectTitle: cleanTitle,
+            }
+          : project,
+      ),
+    );
+
+    setSavedProjects(nextProjects);
+    saveToStorage(STORAGE_KEYS.namedProjects, nextProjects);
+  }
+
+  function openNamedProject(projectId) {
+    const project = savedProjects.find((item) => item.id === projectId);
+
+    if (!project?.data) return;
+
+    const shouldOpen = window.confirm(
+      `Project "${getProjectName(project)}" openen? Je huidige werk wordt vervangen.`,
+    );
+
+    if (!shouldOpen) return;
+
+    if (activeProjectId !== project.id && hasMeaningfulSavedProject(getProjectSnapshot())) {
+      const shouldSaveCurrent = window.confirm(
+        "Wil je je huidige project eerst opslaan voordat je dit project opent?",
+      );
+
+      if (shouldSaveCurrent) {
+        if (!activeProjectId) {
+          const currentProjectTitle = window.prompt(
+            "Naam van je huidige project:",
+            projectTitle,
+          );
+
+          if (!currentProjectTitle?.trim()) return;
+
+          saveProjectSnapshot({
+            showConfirmation: true,
+            projectTitleOverride: currentProjectTitle.trim(),
+          });
+        } else {
+          saveProjectSnapshot({ showConfirmation: true });
+        }
+      }
+    }
+
+    applyProjectState(project.data);
+    setActiveProjectId(project.id);
+    setProjectTitle(getProjectName(project));
+    saveToStorage(STORAGE_KEYS.activeProjectId, project.id);
+    saveToStorage(STORAGE_KEYS.project, project);
+    setManualSavedProject(project);
+    setShowRestorePrompt(false);
+  }
+
+  function createNewNamedProject() {
+    const currentSnapshot = getProjectSnapshot();
+
+    if (hasMeaningfulSavedProject(currentSnapshot)) {
+      const shouldSave = window.confirm(
+        "Wil je je huidige project eerst opslaan voordat je een nieuw project start?",
+      );
+
+      if (shouldSave) {
+        if (!activeProjectId) {
+          const currentProjectTitle = window.prompt(
+            "Naam van je huidige project:",
+            projectTitle,
+          );
+
+          if (!currentProjectTitle?.trim()) return;
+
+          saveProjectSnapshot({
+            showConfirmation: true,
+            projectTitleOverride: currentProjectTitle.trim(),
+          });
+        } else {
+          saveProjectSnapshot({ showConfirmation: true });
+        }
+      }
+    }
+
+    const nextTitle = window.prompt(
+      "Naam van het nieuwe project:",
+      "Nieuwe plattegrond",
+    );
+
+    if (!nextTitle?.trim()) return;
+
+    applyProjectState(createEmptyProjectState());
+    setActiveProjectId(null);
+    setProjectTitle(nextTitle.trim());
+    saveToStorage(STORAGE_KEYS.activeProjectId, null);
+    setShowRestorePrompt(false);
+  }
+
   function continueSavedProject() {
     applyProjectState(savedProject?.data ?? createEmptyProjectState());
+    setActiveProjectId(savedProject?.id ?? null);
+    setProjectTitle(getProjectName(savedProject, DEFAULT_PROJECT_TITLE));
+    saveToStorage(STORAGE_KEYS.activeProjectId, savedProject?.id ?? null);
     setShowRestorePrompt(false);
   }
 
   function startNewProject() {
     applyProjectState(createEmptyProjectState());
+    setActiveProjectId(null);
+    setProjectTitle(DEFAULT_PROJECT_TITLE);
+    saveToStorage(STORAGE_KEYS.activeProjectId, null);
     setShowRestorePrompt(false);
   }
 
@@ -935,6 +1424,9 @@ function AppLayout() {
     if (!shouldRestore) return;
 
     applyProjectState(latestManualProject.data);
+    setActiveProjectId(latestManualProject.id ?? null);
+    setProjectTitle(getProjectName(latestManualProject, DEFAULT_PROJECT_TITLE));
+    saveToStorage(STORAGE_KEYS.activeProjectId, latestManualProject.id ?? null);
     setManualSavedProject(latestManualProject);
     setShowRestorePrompt(false);
   }
@@ -963,6 +1455,7 @@ function AppLayout() {
     showFloorplan,
     showWallDimensions,
     canvasCamera,
+    projectTitle,
     myFurniture,
     showRestorePrompt,
   ]);
@@ -1043,6 +1536,7 @@ function AppLayout() {
         });
         setBackgroundScaleCompleted(false);
         setBackgroundScaleMmPerPixel(null);
+        setWallSuggestions([]);
         setSelectedObject({ type: "background", id: "background" });
       } catch {
         window.alert("Deze PDF kan niet worden geopend.");
@@ -1069,6 +1563,7 @@ function AppLayout() {
       });
       setBackgroundScaleCompleted(false);
       setBackgroundScaleMmPerPixel(null);
+      setWallSuggestions([]);
       setSelectedObject({ type: "background", id: "background" });
     };
 
@@ -1108,6 +1603,7 @@ function AppLayout() {
     setBackgroundCalibrationActive(false);
     setBackgroundRoomAlignActive(false);
     setSelectedObject(null);
+    setWallSuggestions([]);
   }
 
   function startBackgroundCalibration() {
@@ -1891,6 +2387,55 @@ function AppLayout() {
       ),
     );
     setSelectedObject({ type: "door", id: door.id });
+    setActiveTool("select");
+  }
+
+  function placeDoorInWallGap(point) {
+    const gap = findDoorGapAtPoint(point, walls, calibration);
+
+    if (!gap) return;
+
+    const virtualWall = {
+      id: gap.wallId,
+      startPoint: gap.startPoint,
+      endPoint: gap.endPoint,
+    };
+    const opening = {
+      id: crypto.randomUUID(),
+      wallIds: gap.wallIds,
+      startPoint: gap.startPoint,
+      endPoint: gap.endPoint,
+      position: gap.position,
+      widthMm: gap.widthMm,
+      fill: "door",
+      doorId: null,
+    };
+    const door = {
+      id: crypto.randomUUID(),
+      wallId: gap.wallId,
+      openingId: opening.id,
+      position: gap.position,
+      widthMm: gap.widthMm,
+      doorWidthMm: gap.widthMm,
+      sparingWidthMm: gap.widthMm,
+      hingeSide: "start",
+      openDirection: getOpeningFillDirection(virtualWall, opening, rooms),
+      direction: "inside",
+      swing: "right",
+    };
+
+    pushUndoSnapshot();
+
+    setOpenings((current) => [
+      ...current,
+      {
+        ...opening,
+        doorId: door.id,
+      },
+    ]);
+    setDoors((current) => [...current, door]);
+    setSelectedObject({ type: "door", id: door.id });
+    setActiveTool("select");
   }
 
   function convertDoorToOpening(doorId) {
@@ -2587,6 +3132,15 @@ function AppLayout() {
 
       <main className="workspace">
         <Sidebar
+          projectTitle={projectTitle}
+          savedProjects={savedProjects}
+          activeProjectId={activeProjectId}
+          onSaveProject={saveCurrentNamedProject}
+          onRenameProject={renameCurrentProject}
+          onNewProject={createNewNamedProject}
+          onOpenProject={openNamedProject}
+          onExportProject={exportProjectFile}
+          onImportProject={importProjectFile}
           onAddFurniture={addFurniture}
           myFurniture={myFurniture}
           onDeleteMyFurniture={deleteMyFurniture}
@@ -2603,14 +3157,20 @@ function AppLayout() {
           onSaveRoomDraft={saveRoomDraft}
           onCreate={createRectangleRoom}
           onStartOpening={startOpeningWorkflow}
-          onSaveProject={() => saveProjectSnapshot({ showConfirmation: true })}
           onRestoreSavedProject={restoreManualSavedProject}
           canRestoreSavedProject={hasMeaningfulSavedProject(manualSavedProject)}
+          onDetectWalls={detectWallsFromBackground}
+          wallDetectionBusy={wallDetectionBusy}
+          wallSuggestionCount={wallSuggestions.length}
+          onAcceptWallSuggestions={acceptWallSuggestions}
+          onClearWallSuggestions={clearWallSuggestions}
+          canDetectWalls={Boolean(background?.source)}
         />
 
         <Canvas
           furniture={furniture}
           walls={walls}
+          wallSuggestions={wallSuggestions}
           doors={doors}
           openings={openings}
           background={background}
@@ -2626,9 +3186,11 @@ function AppLayout() {
           onApplyBackgroundCalibration={applyBackgroundCalibration}
           backgroundWorkflowRequest={backgroundWorkflowRequest}
           addWall={addWall}
+          onRemoveWallSuggestion={removeWallSuggestion}
           addDoor={addDoor}
           onStartDoorMove={startDoorMove}
           onUpdateDoorPosition={updateDoorPosition}
+          onUpdateDoorSize={updateDoorSize}
           selectedFurnitureId={selectedFurnitureId}
           onSelectFurniture={selectFurniture}
           onMoveFurniture={moveFurniture}
@@ -2678,6 +3240,8 @@ function AppLayout() {
           onToggleDoorSwing={toggleDoorSwing}
           selectedRoomIds={selectedRoomIds}
           onSelectOpeningWall={selectOpeningWall}
+          onConvertOpeningToDoor={convertOpeningToDoor}
+          onPlaceDoorInWallGap={placeDoorInWallGap}
         />
 
         <Inspector
@@ -2709,6 +3273,8 @@ function AppLayout() {
           onUpdateRectangleRoomWalls={updateRectangleRoomWalls}
           onSetRoomLocked={setRoomLocked}
           onToggleDoorDirection={toggleDoorDirection}
+          onToggleDoorSwing={toggleDoorSwing}
+          onUpdateDoorSize={updateDoorSize}
           onConvertOpeningToDoor={convertOpeningToDoor}
           onConvertDoorToOpening={convertDoorToOpening}
           onUpdateBackground={updateBackground}
@@ -2750,7 +3316,7 @@ function AppLayout() {
           <section className="restore-card" aria-labelledby="restore-title">
             <h2 id="restore-title">👋 Welkom terug!</h2>
             <p>Je was bezig met:</p>
-            <strong>{savedProject?.projectTitle ?? PROJECT_TITLE}</strong>
+            <strong>{getProjectName(savedProject, DEFAULT_PROJECT_TITLE)}</strong>
             <div className="restore-actions">
               <button
                 className="restore-button restore-button-primary"
