@@ -169,12 +169,66 @@
 }
 
 .roomsketch-scale-comparison {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 6px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin: 14px 0;
   color: #4b5b50;
   font-size: 14px;
+}
+
+.roomsketch-scale-comparison section {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 14px;
+  padding: 12px;
+  border: 1px solid #d7e4d4;
+  border-radius: 10px;
+  background: #f8fbf7;
+}
+
+.roomsketch-scale-comparison h3 {
+  grid-column: 1 / -1;
+  margin: 0 0 4px;
+  color: #27452f;
+  font-size: 15px;
+}
+
+.roomsketch-scale-comparison .roomsketch-scale-difference {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roomsketch-comparison-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roomsketch-wizard-button.secondary,
+.roomsketch-wizard-cancel-button {
+  border: 1px solid #79a86e;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px 14px;
+  color: #294d31;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.roomsketch-wizard-cancel-button {
+  border-color: transparent;
+  color: #5f6d63;
+}
+
+.roomsketch-wizard-error {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff1f0;
+  color: #9b2c24;
+  font-weight: 700;
 }
 
 .roomsketch-scale-comparison strong {

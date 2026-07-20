@@ -147,6 +147,7 @@ function createEmptyProjectState() {
     calibration: null,
     backgroundScaleCompleted: false,
     backgroundScaleMmPerPixel: null,
+    backgroundCalibration: null,
     showFloorplan: true,
     showWallDimensions: true,
     canvasCamera: DEFAULT_CANVAS_CAMERA,
@@ -732,6 +733,9 @@ function AppLayout() {
     useState(null);
   const [backgroundScaleMmPerPixel, setBackgroundScaleMmPerPixel] =
     useState(null);
+  const [backgroundCalibration, setBackgroundCalibration] = useState(null);
+  const [candidateBackgroundCalibration, setCandidateBackgroundCalibration] =
+    useState(null);
 
   function captureUndoState() {
     return cloneCanvasState({
@@ -742,6 +746,9 @@ function AppLayout() {
       openings,
       background,
       furniture,
+      backgroundScaleCompleted,
+      backgroundScaleMmPerPixel,
+      backgroundCalibration,
     });
   }
 
@@ -761,6 +768,10 @@ function AppLayout() {
     setOpenings(snapshot.openings ?? []);
     setBackground(snapshot.background ?? null);
     setFurniture(snapshot.furniture);
+    setBackgroundScaleCompleted(snapshot.backgroundScaleCompleted ?? false);
+    setBackgroundScaleMmPerPixel(snapshot.backgroundScaleMmPerPixel ?? null);
+    setBackgroundCalibration(snapshot.backgroundCalibration ?? null);
+    setCandidateBackgroundCalibration(null);
 
     setSelectedWallId(null);
     setSelectedObject(null);
@@ -1103,6 +1114,7 @@ function AppLayout() {
         calibration,
         backgroundScaleCompleted,
         backgroundScaleMmPerPixel,
+        backgroundCalibration,
         showFloorplan,
         showWallDimensions,
         canvasCamera,
@@ -1155,6 +1167,8 @@ function AppLayout() {
     setBackgroundScaleCompleted(false);
     setBackgroundScaleMmPerPixel(null);
     setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibration(null);
+    setCandidateBackgroundCalibration(null);
     setBackgroundCalibrationPointCount(0);
     setSelectedFurnitureId(null);
     setActiveTool("select");
@@ -1185,6 +1199,8 @@ function AppLayout() {
     setBackgroundScaleMmPerPixel(
       projectState.backgroundScaleMmPerPixel ?? null,
     );
+    setBackgroundCalibration(projectState.backgroundCalibration ?? null);
+    setCandidateBackgroundCalibration(null);
     setShowFloorplan(projectState.showFloorplan ?? true);
     setShowWallDimensions(projectState.showWallDimensions ?? true);
     setCanvasCamera(projectState.canvasCamera ?? DEFAULT_CANVAS_CAMERA);
@@ -1452,6 +1468,7 @@ function AppLayout() {
     calibration,
     backgroundScaleCompleted,
     backgroundScaleMmPerPixel,
+    backgroundCalibration,
     showFloorplan,
     showWallDimensions,
     canvasCamera,
@@ -1598,6 +1615,8 @@ function AppLayout() {
     setBackground(null);
     setBackgroundScaleCompleted(false);
     setBackgroundScaleMmPerPixel(null);
+    setBackgroundCalibration(null);
+    setCandidateBackgroundCalibration(null);
     setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(false);
@@ -1623,6 +1642,7 @@ function AppLayout() {
     setSelectedObject({ type: "background", id: "background" });
     setBackgroundRoomAlignActive(false);
     setBackgroundCalibrationMeasurement(null);
+    setCandidateBackgroundCalibration(null);
     setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(true);
   }
@@ -1631,6 +1651,7 @@ function AppLayout() {
     setBackgroundCalibrationActive(false);
     setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationPointCount(0);
+    setCandidateBackgroundCalibration(null);
     setTemporaryTool(null);
   }
 
@@ -1722,10 +1743,12 @@ function AppLayout() {
   }
 
   function applyBackgroundCalibration(realDistanceMm, options = {}) {
-    if (!background || !backgroundCalibrationMeasurement) return null;
+    if (!background || !backgroundCalibrationMeasurement) {
+      return { error: "Kies eerst twee geldige meetpunten." };
+    }
 
     if (!Number.isFinite(realDistanceMm) || realDistanceMm <= 0) {
-      return null;
+      return { error: "Vul een geldige, positieve afstand in millimeters in." };
     }
 
     const previousScaleMmPerPixel = Number.isFinite(
@@ -1744,13 +1767,47 @@ function AppLayout() {
       !Number.isFinite(measuredSourceDistance) ||
       measuredSourceDistance <= 0
     ) {
-      return null;
+      return { error: "De gemeten pixelafstand moet groter zijn dan nul." };
     }
 
     const desiredWorldDistance = realDistanceMm / mmPerPixel;
     const nextScale = desiredWorldDistance / measuredSourceDistance;
     const nextBackgroundScaleMmPerPixel =
       realDistanceMm / measuredSourceDistance;
+
+    if (
+      !Number.isFinite(nextScale) ||
+      nextScale <= 0 ||
+      !Number.isFinite(nextBackgroundScaleMmPerPixel) ||
+      nextBackgroundScaleMmPerPixel <= 0
+    ) {
+      return { error: "Met deze meting kan geen geldige schaal worden berekend." };
+    }
+
+    const nextCalibration = {
+      pixelDistance: measuredWorldDistance,
+      realDistanceMm,
+      mmPerPixel: nextBackgroundScaleMmPerPixel,
+      backgroundScale: nextScale,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (options.showComparison && backgroundScaleCompleted) {
+      setCandidateBackgroundCalibration(nextCalibration);
+      setBackgroundCalibrationActive(false);
+      setTemporaryTool(null);
+
+      return {
+        shouldShowComparison: true,
+        currentCalibration:
+          backgroundCalibration ?? {
+            pixelDistance: null,
+            realDistanceMm: null,
+            mmPerPixel: previousScaleMmPerPixel,
+          },
+        candidateCalibration: nextCalibration,
+      };
+    }
 
     pushUndoSnapshot();
     setBackground((current) =>
@@ -1763,6 +1820,8 @@ function AppLayout() {
     );
     setBackgroundScaleCompleted(true);
     setBackgroundScaleMmPerPixel(nextBackgroundScaleMmPerPixel);
+    setBackgroundCalibration(nextCalibration);
+    setCandidateBackgroundCalibration(null);
     setBackgroundCalibrationMeasurement(null);
     setBackgroundCalibrationPointCount(0);
     setBackgroundCalibrationActive(false);
@@ -1773,6 +1832,26 @@ function AppLayout() {
       previousScaleMmPerPixel,
       newScaleMmPerPixel: nextBackgroundScaleMmPerPixel,
     };
+  }
+
+  function finishBackgroundCalibrationChoice(applyCandidate) {
+    const candidate = candidateBackgroundCalibration;
+
+    if (applyCandidate && candidate) {
+      pushUndoSnapshot();
+      setBackground((current) =>
+        current ? { ...current, scale: candidate.backgroundScale } : current,
+      );
+      setBackgroundScaleCompleted(true);
+      setBackgroundScaleMmPerPixel(candidate.mmPerPixel);
+      setBackgroundCalibration(candidate);
+    }
+
+    setCandidateBackgroundCalibration(null);
+    setBackgroundCalibrationMeasurement(null);
+    setBackgroundCalibrationPointCount(0);
+    setBackgroundCalibrationActive(false);
+    setTemporaryTool(null);
   }
 
   function addFurniture(catalogId) {
@@ -3178,12 +3257,26 @@ function AppLayout() {
           backgroundRoomAlignActive={backgroundRoomAlignActive}
           backgroundScaleCompleted={backgroundScaleCompleted}
           backgroundScaleMmPerPixel={backgroundScaleMmPerPixel}
+          backgroundCalibration={
+            backgroundCalibration ??
+            (Number.isFinite(backgroundScaleMmPerPixel)
+              ? {
+                  pixelDistance: null,
+                  realDistanceMm: null,
+                  mmPerPixel: backgroundScaleMmPerPixel,
+                }
+              : null)
+          }
+          candidateBackgroundCalibration={candidateBackgroundCalibration}
           backgroundCalibrationMeasurement={backgroundCalibrationMeasurement}
           backgroundCalibrationPointCount={backgroundCalibrationPointCount}
           onImportBackground={importBackground}
           onStartBackgroundCalibration={startBackgroundCalibration}
           onCancelBackgroundCalibration={cancelBackgroundCalibration}
           onApplyBackgroundCalibration={applyBackgroundCalibration}
+          onFinishBackgroundCalibrationChoice={
+            finishBackgroundCalibrationChoice
+          }
           backgroundWorkflowRequest={backgroundWorkflowRequest}
           addWall={addWall}
           onRemoveWallSuggestion={removeWallSuggestion}

@@ -15,12 +15,15 @@ function Canvas({
   backgroundRoomAlignActive,
   backgroundScaleCompleted,
   backgroundScaleMmPerPixel,
+  backgroundCalibration,
+  candidateBackgroundCalibration,
   backgroundCalibrationMeasurement,
   backgroundCalibrationPointCount,
   onImportBackground,
   onStartBackgroundCalibration,
   onCancelBackgroundCalibration,
   onApplyBackgroundCalibration,
+  onFinishBackgroundCalibrationChoice,
   backgroundWorkflowRequest,
   addWall,
   onRemoveWallSuggestion,
@@ -172,10 +175,15 @@ function Canvas({
         backgroundCalibrationPointCount={backgroundCalibrationPointCount}
         backgroundScaleMmPerPixel={backgroundScaleMmPerPixel}
         backgroundScaleCompleted={backgroundScaleCompleted}
+        backgroundCalibration={backgroundCalibration}
+        candidateBackgroundCalibration={candidateBackgroundCalibration}
         onImportBackground={onImportBackground}
         onStartBackgroundCalibration={onStartBackgroundCalibration}
         onCancelBackgroundCalibration={onCancelBackgroundCalibration}
         onApplyBackgroundCalibration={onApplyBackgroundCalibration}
+        onFinishBackgroundCalibrationChoice={
+          onFinishBackgroundCalibrationChoice
+        }
         workflowRequest={backgroundWorkflowRequest}
         onSelectTool={onSelectTool}
       />

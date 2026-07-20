@@ -11,9 +11,12 @@ function RoomSketchWizard({
   backgroundCalibrationMeasurement,
   backgroundCalibrationPointCount = 0,
   backgroundScaleMmPerPixel,
+  backgroundCalibration,
+  candidateBackgroundCalibration,
   onImportBackground,
   onStartBackgroundCalibration,
   onApplyBackgroundCalibration,
+  onFinishBackgroundCalibrationChoice,
   onCancelBackgroundCalibration,
   onSelectTool,
   workflowRequest,
@@ -23,6 +26,7 @@ function RoomSketchWizard({
   const [activeRequestId, setActiveRequestId] = useState(null);
   const [scaleComparison, setScaleComparison] = useState(null);
   const [realDistanceMm, setRealDistanceMm] = useState("");
+  const [validationError, setValidationError] = useState("");
   const fileInputRef = useRef(null);
   const distanceInputRef = useRef(null);
   const previousBackgroundRef = useRef(background);
@@ -30,6 +34,9 @@ function RoomSketchWizard({
   const enteredDistance = Number(realDistanceMm.replace(",", "."));
   const canApplyDistance =
     hasMeasuredDistance && Number.isFinite(enteredDistance) && enteredDistance > 0;
+  const showCalibrationComparison = Boolean(
+    backgroundCalibration && candidateBackgroundCalibration,
+  );
 
   useEffect(() => {
     if (previousBackgroundRef.current !== background && background && step === 2) {
@@ -46,6 +53,7 @@ function RoomSketchWizard({
     setDismissed(false);
     setScaleComparison(null);
     setRealDistanceMm("");
+    setValidationError("");
     setStep(workflowRequest.startStep);
   }, [workflowRequest]);
 
@@ -61,9 +69,6 @@ function RoomSketchWizard({
       return;
     }
 
-    if (backgroundScaleCompleted && step >= 8 && step !== 9 && step !== 10) {
-      setStep(9);
-    }
   }, [activeRequestId, backgroundScaleCompleted, step]);
 
   useEffect(() => {
@@ -80,7 +85,10 @@ function RoomSketchWizard({
   }
 
   function applyDistance() {
-    if (!canApplyDistance) return;
+    if (!canApplyDistance) {
+      setValidationError("Vul een geldige, positieve afstand in millimeters in.");
+      return;
+    }
 
     const isResizeWorkflow =
       workflowRequest?.id === activeRequestId && workflowRequest.startStep === 5;
@@ -88,6 +96,12 @@ function RoomSketchWizard({
       showComparison: isResizeWorkflow,
       previousScaleMmPerPixel: workflowRequest?.previousScaleMmPerPixel,
     });
+    if (nextComparison?.error) {
+      setValidationError(nextComparison.error);
+      return;
+    }
+
+    setValidationError("");
     setRealDistanceMm("");
 
     if (nextComparison?.shouldShowComparison) {
@@ -102,7 +116,19 @@ function RoomSketchWizard({
   function formatScaleValue(value) {
     if (!Number.isFinite(value)) return "-";
 
-    return `${value.toFixed(3)} mm/px`;
+    return `${value.toFixed(4).replace(".", ",")} mm per pixel`;
+  }
+
+  function formatPixelDistance(value) {
+    return Number.isFinite(value)
+      ? `${value.toFixed(2).replace(".", ",")} pixels`
+      : "Niet beschikbaar";
+  }
+
+  function formatDistanceMm(value) {
+    return Number.isFinite(value)
+      ? `${new Intl.NumberFormat("nl-NL", { maximumFractionDigits: 12 }).format(value)} mm`
+      : "Niet beschikbaar";
   }
 
   function getScaleComparisonMessage(difference) {
@@ -141,7 +167,7 @@ function RoomSketchWizard({
   }
 
   function renderStep() {
-    switch (step) {
+    switch (showCalibrationComparison ? 10 : step) {
       case 1:
         return (
           <>
@@ -299,9 +325,19 @@ function RoomSketchWizard({
               <span>Werkelijke lengte in mm</span>
               <input
                 ref={distanceInputRef}
-                inputMode="numeric"
+                inputMode="decimal"
                 value={realDistanceMm}
-                onChange={(event) => setRealDistanceMm(event.target.value)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  const parsedValue = Number(value.replace(",", "."));
+
+                  setRealDistanceMm(value);
+                  setValidationError(
+                    value && (!Number.isFinite(parsedValue) || parsedValue <= 0)
+                      ? "Vul een geldige, positieve afstand in millimeters in."
+                      : "",
+                  );
+                }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     applyDistance();
@@ -310,6 +346,12 @@ function RoomSketchWizard({
                 placeholder="4074"
               />
             </label>
+
+            {validationError && (
+              <p className="roomsketch-wizard-error" role="alert">
+                {validationError}
+              </p>
+            )}
 
             <button
               className="roomsketch-wizard-button"
@@ -337,38 +379,90 @@ function RoomSketchWizard({
         );
 
       case 10: {
-        const previousScale = scaleComparison?.previousScaleMmPerPixel;
-        const newScale =
-          scaleComparison?.newScaleMmPerPixel ?? backgroundScaleMmPerPixel;
-        const difference =
-          Number.isFinite(previousScale) && Number.isFinite(newScale)
-            ? Math.abs(previousScale - newScale)
-            : null;
+        const current =
+          backgroundCalibration ?? scaleComparison?.currentCalibration;
+        const candidate =
+          candidateBackgroundCalibration ?? scaleComparison?.candidateCalibration;
+        const previousScale = current?.mmPerPixel;
+        const newScale = candidate?.mmPerPixel ?? backgroundScaleMmPerPixel;
+        const difference = Number.isFinite(previousScale) && Number.isFinite(newScale)
+          ? newScale - previousScale
+          : null;
+        const percentage = Number.isFinite(difference) && previousScale > 0
+          ? (difference / previousScale) * 100
+          : null;
         const isLargeDifference =
-          Number.isFinite(difference) && difference > 0.1;
+          Number.isFinite(difference) && Math.abs(difference) > 0.1;
+        const signedDifference = Number.isFinite(difference)
+          ? `${difference >= 0 ? "+" : ""}${difference.toFixed(4).replace(".", ",")} mm per pixel`
+          : "-";
+        const signedPercentage = Number.isFinite(percentage)
+          ? `${percentage >= 0 ? "+" : ""}${percentage.toFixed(2).replace(".", ",")}%`
+          : "-";
+
+        function closeComparison(applyCandidate) {
+          onFinishBackgroundCalibrationChoice(applyCandidate);
+          setActiveRequestId(null);
+          setScaleComparison(null);
+          setDismissed(true);
+        }
 
         return (
           <>
-            <h2>✓ Bouwtekening opnieuw op maat gezet</h2>
+            <h2>Kalibraties vergelijken</h2>
+
+            <p>Bekijk het verschil en kies welke schaal actief blijft.</p>
 
             <div className="roomsketch-scale-comparison">
-              <span>Vorige schaal</span>
-              <strong>{formatScaleValue(previousScale)}</strong>
-              <span className="roomsketch-scale-arrow">↓</span>
-              <span>Nieuwe schaal</span>
-              <strong>{formatScaleValue(newScale)}</strong>
-              <span>Verschil</span>
-              <strong>{formatScaleValue(difference)}</strong>
+              <section>
+                <h3>Huidige kalibratie</h3>
+                <span>Gemeten pixelafstand</span>
+                <strong>{formatPixelDistance(current?.pixelDistance)}</strong>
+                <span>Werkelijke afstand</span>
+                <strong>{formatDistanceMm(current?.realDistanceMm)}</strong>
+                <span>Schaal</span>
+                <strong>{formatScaleValue(previousScale)}</strong>
+              </section>
+              <section>
+                <h3>Nieuwe meting</h3>
+                <span>Gemeten pixelafstand</span>
+                <strong>{formatPixelDistance(candidate?.pixelDistance)}</strong>
+                <span>Werkelijke afstand</span>
+                <strong>{formatDistanceMm(candidate?.realDistanceMm)}</strong>
+                <span>Schaal</span>
+                <strong>{formatScaleValue(newScale)}</strong>
+              </section>
+              <section className="roomsketch-scale-difference">
+                <h3>Verschil</h3>
+                <strong>{signedDifference} ({signedPercentage})</strong>
+              </section>
             </div>
 
             <p className="roomsketch-scale-interpretation">
               {isLargeDifference ? "⚠ " : "✓ "}
-              {getScaleComparisonMessage(difference)}
+              {getScaleComparisonMessage(Math.abs(difference))}
             </p>
 
-            <button className="roomsketch-wizard-button" onClick={startDrawing}>
-              Begin met tekenen
-            </button>
+            <div className="roomsketch-comparison-actions">
+              <button
+                className="roomsketch-wizard-button secondary"
+                onClick={() => closeComparison(false)}
+              >
+                Huidige schaal behouden
+              </button>
+              <button
+                className="roomsketch-wizard-button"
+                onClick={() => closeComparison(true)}
+              >
+                Nieuwe schaal toepassen
+              </button>
+              <button
+                className="roomsketch-wizard-cancel-button"
+                onClick={() => closeComparison(false)}
+              >
+                Annuleren
+              </button>
+            </div>
           </>
         );
       }
